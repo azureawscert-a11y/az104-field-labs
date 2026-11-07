@@ -41,7 +41,7 @@ assign_role "$OPS_ID" Group "Virtual Machine Contributor" "$RG_ID"
 
 say "3. Infrastructure from Bicep (preview, then deploy)"
 # ZRS spreads copies over availability zones. Regions without zones (for example canadaeast) only offer LRS/GRS.
-ZONES="$(az account list-locations --query "[?name=='$LOC'] | [0].availabilityZoneMappings | length(@)" -o tsv 2>/dev/null)"
+ZONES="$(az account list-locations --query "[?name=='$LOC'] | [0].availabilityZoneMappings | length(@)" -o tsv 2>/dev/null || true)"
 if [[ "${ZONES:-0}" -gt 0 ]]; then SKU=Standard_ZRS; else SKU=Standard_LRS; fi
 echo "  storage redundancy for $LOC: $SKU"
 az deployment group what-if -g "$RG" --template-file "$HERE/main.bicep" \
