@@ -1,0 +1,22 @@
+{
+  "rules": [
+    {
+      "enabled": true,
+      "name": "reports-to-cool-then-delete",
+      "type": "Lifecycle",
+      "definition": {
+        "filters": {
+          "blobTypes": ["blockBlob"],
+          "prefixMatch": ["partner-share/reports/"]
+        },
+        "actions": {
+          "baseBlob": {
+            "tierToCool": { "daysAfterModificationGreaterThan": 30 },
+            "tierToArchive": { "daysAfterModificationGreaterThan": 90 },
+            "delete": { "daysAfterModificationGreaterThan": 365 }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+// Lab 11: KQL practice queries. Paste them in Log Analytics workspace > Logs.
+// Logs take 5 to 15 minutes to appear after the first activity.
+
+// 1. The 10 most recent blob operations
+StorageBlobLogs
+| sort by TimeGenerated desc
+| take 10
+
+// 2. Count operations by type in the last hour
+StorageBlobLogs
+| where TimeGenerated > ago(1h)
+| summarize Count = count() by OperationName
+| sort by Count desc
+
+// 3. Failed requests only, with who and from where
+StorageBlobLogs
+| where StatusCode >= 400
+| project TimeGenerated, OperationName, StatusCode, StatusText, CallerIpAddress, Uri
+
+// 4. Requests per 5 minutes, as a chart
+StorageBlobLogs
+| summarize Requests = count() by bin(TimeGenerated, 5m)
+| render timechart
+
+// 5. Slowest operations (server latency in ms)
+StorageBlobLogs
+| top 5 by ServerLatencyMs desc
+| project TimeGenerated, OperationName, ServerLatencyMs, Uri

@@ -1,0 +1,9 @@
+# secrets and local output never go to GitHub
+*.pem
+*.key
+.env
+sas.txt
+restored/
+*.json.bak
+labs/**/main.json
+capstone/main.json

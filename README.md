@@ -1,0 +1,67 @@
+# az104-field-labs
+
+Hands-on workplace labs for the book **AZ-104: The Azure Administrator Field Guide** (Exam to Work series) by Jey Singh.
+
+Each lab is a realistic help-desk or project ticket that a junior Azure administrator gets in the first months on the job. You deploy it with a script, prove it works with an automatic check, explain it, and delete it.
+
+> Independent learning material. Not affiliated with, authorized, sponsored or approved by Microsoft Corporation. Microsoft, Azure and Microsoft Entra are trademarks of the Microsoft group of companies.
+
+## What you need
+
+1. **An Azure subscription you are allowed to break.** A free account or Pay-As-You-Go subscription works. Do not use your employer's production subscription.
+2. **A budget alert before you start.** Portal: Cost Management > Budgets > Add. Set US$20 a month (or the same in your currency) with email alerts at 50%, 80% and 100%.
+3. **A shell with the Azure CLI.** Easiest: Azure Cloud Shell (bash) in the portal, which is already signed in. Locally: install the Azure CLI, then run `az login`.
+4. **Owner** (or User Access Administrator + Contributor) on the subscription for labs 01, 02 and the capstone (they create role and policy assignments). Labs 01 also needs permission to create users in Microsoft Entra ID (you have it as the creator of a free account).
+
+## How every lab works
+
+```bash
+# In Cloud Shell: Manage files > Upload > az104-field-labs.zip, then:
+unzip az104-field-labs.zip -d az104-field-labs && cd az104-field-labs
+# (or git clone the GitHub link from the book's download notes, if published)
+chmod +x labs/*/*.sh capstone/*.sh
+cd labs/03-storage-sas-lifecycle
+cat README.md        # read the ticket first
+./deploy.sh          # build it
+./verify.sh          # PASS / FAIL checks
+./cleanup.sh         # delete everything the lab created
+```
+
+Then try it yourself: read `deploy.sh`, delete the lab, and rebuild it by typing the commands by hand. That is where the learning happens.
+
+## Safety rules
+
+- Every lab creates **one resource group** named `rg-az104-labNN`. `cleanup.sh` deletes that group and everything billable in it. Azure itself may leave two **empty, free** helper groups behind: `AzureBackupRG_<region>_1` (labs 12 and capstone, created by Azure Backup for restore points) and `NetworkWatcherRG` (labs 09 and capstone). Delete them when you finish all labs with `az group delete -n AzureBackupRG_canadacentral_1 --yes` and `az group delete -n NetworkWatcherRG --yes` (Network Watcher is recreated automatically when needed).
+- Run `cleanup.sh` the same day. Several labs create VMs, App Service plans or backup vaults that cost money every hour.
+- Never paste real passwords, keys or SAS tokens into GitHub. The scripts print secrets only to your terminal.
+- `deploy.sh` stops on the first error. Read the message, fix the cause, and run it again: deploy scripts are safe to re-run. `verify.sh` and `cleanup.sh` keep going and report every problem they find.
+
+## Labs
+
+| # | Ticket | Outline area | Rough cost if deleted same day |
+|---|--------|--------------|------|
+| 01 | Onboard a new hire: user, group, Reader at resource group scope | Identity, RBAC | Free |
+| 02 | Enforce a CostCenter tag with Azure Policy and protect the group with a lock | Governance | Free |
+| 03 | Share files with a partner using a revocable SAS + lifecycle rules | Storage access | < $0.05 |
+| 04 | Team file share with snapshots and soft delete, restore a deleted file | Azure Files | < $0.05 |
+| 05 | Deploy a VM from Bicep, modify the template, preview with what-if | ARM/Bicep, VMs | ~ $0.05 per hour |
+| 06 | Resize a VM and add a data disk | VM sizes, disks | ~ $0.10 per hour |
+| 07 | Zero-downtime release with an App Service deployment slot swap | App Service | ~ $0.10 per hour (S1) |
+| 08 | Run an image from Azure Container Registry on ACI and Container Apps | Containers | < $0.20 |
+| 09 | Hub-spoke peering, NSG, and prove traffic with Network Watcher | Networking | ~ $0.05 per hour |
+| 10 | Lock a storage account to a private endpoint with private DNS | Secure access | ~ $0.05 per hour |
+| 11 | Send logs to Log Analytics, query with KQL, alert to email | Monitoring | < $0.05 |
+| 12 | Back up a VM with a custom policy and restore a file | Backup | ~ $0.10 per hour |
+| Capstone | Mini landing zone for a small company | All domains | ~ $0.15 per hour |
+
+VM labs use the current Bsv2 sizes (`Standard_B2ats_v2`, resized to `Standard_B2als_v2` in lab 06). The older B1s/B2s sizes are being retired and many new subscriptions cannot deploy them. Check yours with `az vm list-skus -l canadacentral --size Standard_B2 -o table`.
+
+Costs are rough estimates in USD for canadacentral at the time of writing and change over time. Check the Azure pricing calculator and your budget alert.
+
+## Lint
+
+`.github/workflows/lint.yml` runs `shellcheck` on every script and `az bicep build` on every Bicep file on each push and pull request.
+
+## License
+
+MIT. See LICENSE.

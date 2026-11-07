@@ -1,0 +1,30 @@
+name: lint
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bash syntax check
+        run: |
+          find . -name '*.sh' -print0 | xargs -0 -n1 bash -n
+      - name: ShellCheck
+        run: |
+          sudo apt-get update -y && sudo apt-get install -y shellcheck
+          find . -name '*.sh' -print0 | xargs -0 shellcheck -x
+
+  bicep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build every Bicep file
+        run: |
+          az bicep install
+          find . -name '*.bicep' -print0 | xargs -0 -I{} az bicep build --file {} --stdout > /dev/null
