@@ -23,8 +23,9 @@ expect "SSH from a spoke address -> app is Denied" \
      --local "${APP_IP}:22" --remote "10.20.1.200:50000" --query access -o tsv)" "Deny"
 
 say "Next hop: how does the app VM reach the hub?"
-expect "next hop to the hub is VNetPeering" \
-  "$(az network watcher show-next-hop -g "$RG" --vm vm-app01 --source-ip "$APP_IP" --dest-ip "$HUB_IP" --query nextHopType -o tsv)" "VNetPeering"
+# Next hop names the peering "VirtualNetworkPeering" (effective routes call the same thing "VNetPeering")
+expect "next hop to the hub is VirtualNetworkPeering" \
+  "$(az network watcher show-next-hop -g "$RG" --vm vm-app01 --source-ip "$APP_IP" --dest-ip "$HUB_IP" --query nextHopType -o tsv)" "VirtualNetworkPeering"
 
 say "Real traffic: ping the app VM from the hub VM"
 OUT="$(az vm run-command invoke -g "$RG" -n vm-hub01 --command-id RunShellScript \

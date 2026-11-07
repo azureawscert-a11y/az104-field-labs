@@ -12,7 +12,7 @@ expect "VM size is now $VM_SIZE_BIG" \
 expect "one data disk attached" \
   "$(az vm show --resource-group "$RG" --name "$VM" --query 'length(storageProfile.dataDisks)' -o tsv)" "1"
 expect "data disk is 8 GiB" \
-  "$(az vm show --resource-group "$RG" --name "$VM" --query 'storageProfile.dataDisks[0].diskSizeGb' -o tsv)" "8"
+  "$(az disk show --resource-group "$RG" --name "${VM}-data01" --query diskSizeGB -o tsv)" "8"
 MNT="$(az vm run-command invoke --resource-group "$RG" --name "$VM" --command-id RunShellScript \
   --scripts "findmnt -no TARGET /data" --query "value[0].message" -o tsv 2>/dev/null)"
 if [[ "$MNT" == *"/data"* ]]; then pass "disk is mounted at /data inside the VM"; else fail "/data is not mounted"; fi
