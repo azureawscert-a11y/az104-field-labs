@@ -9,7 +9,7 @@
 |---|---|---|
 | Governance | Tagged RG, policy **Inherit a tag from the resource group if missing** (CostCenter, Modify effect with a managed identity), policy **Allowed locations** (your lab region only), Entra group with **Virtual Machine Contributor**, **CanNotDelete** lock | CLI |
 | Network | `vnet-hub` 10.10.0.0/16 (snet-shared, snet-pe), `vnet-spoke-app` 10.20.0.0/16 (snet-app + NSG), two-way peering | Bicep |
-| Storage | ZRS account, public access disabled, versioning + soft delete, private endpoint in the hub, private DNS zone linked to both VNets | Bicep |
+| Storage | ZRS account (LRS in regions without availability zones), public access disabled, versioning + soft delete, private endpoint in the hub, private DNS zone linked to both VNets | Bicep |
 | Compute | `vm-app01` (your lab VM size, Ubuntu 24.04, no public IP) in the spoke | Bicep |
 | Operations | Log Analytics, blob diagnostic logs, action group (email), CPU > 80% alert, Recovery Services vault + DefaultPolicy | Bicep + CLI |
 

@@ -11,6 +11,9 @@ param adminPublicKey string
 @description('Admin user name for the app VM')
 param adminUsername string = 'azureuser'
 
+@description('Storage redundancy. ZRS needs a region with availability zones; deploy.sh picks LRS where there are none.')
+param storageSku string = 'Standard_ZRS'
+
 @description('VM size for vm-app01. deploy.sh passes the size that works in your subscription.')
 param vmSize string = 'Standard_B2ats_v2'
 
@@ -160,7 +163,7 @@ resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   location: location
   tags: tags
   sku: {
-    name: 'Standard_ZRS'
+    name: storageSku
   }
   kind: 'StorageV2'
   properties: {

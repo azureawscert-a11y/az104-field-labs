@@ -40,10 +40,14 @@ OPS_ID="$(az ad group show --group grp-clinic-ops --query id -o tsv)"
 assign_role "$OPS_ID" Group "Virtual Machine Contributor" "$RG_ID"
 
 say "3. Infrastructure from Bicep (preview, then deploy)"
+# ZRS spreads copies over availability zones. Regions without zones (for example canadaeast) only offer LRS/GRS.
+ZONES="$(az account list-locations --query "[?name=='$LOC'] | [0].availabilityZoneMappings | length(@)" -o tsv 2>/dev/null)"
+if [[ "${ZONES:-0}" -gt 0 ]]; then SKU=Standard_ZRS; else SKU=Standard_LRS; fi
+echo "  storage redundancy for $LOC: $SKU"
 az deployment group what-if -g "$RG" --template-file "$HERE/main.bicep" \
-  --parameters adminPublicKey="$(cat "$KEYFILE")" alertEmail="$EMAIL" vmSize="$VM_SIZE" --result-format ResourceIdOnly
+  --parameters adminPublicKey="$(cat "$KEYFILE")" alertEmail="$EMAIL" vmSize="$VM_SIZE" storageSku="$SKU" --result-format ResourceIdOnly
 az deployment group create --name capstone -g "$RG" --template-file "$HERE/main.bicep" \
-  --parameters adminPublicKey="$(cat "$KEYFILE")" alertEmail="$EMAIL" vmSize="$VM_SIZE" -o none
+  --parameters adminPublicKey="$(cat "$KEYFILE")" alertEmail="$EMAIL" vmSize="$VM_SIZE" storageSku="$SKU" -o none
 
 say "4. Backup the app VM"
 az backup vault create -g "$RG" --name rsv-nwclinic --location "$LOC" --tags CostCenter=IT-100 -o none
