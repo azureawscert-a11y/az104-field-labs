@@ -19,7 +19,8 @@ Each lab is a realistic help-desk or project ticket that a junior Azure administ
 # In Cloud Shell: Manage files > Upload > az104-field-labs.zip, then:
 unzip az104-field-labs.zip -d az104-field-labs && cd az104-field-labs
 # or clone it: git clone https://github.com/azureawscert-a11y/az104-field-labs.git
-chmod +x labs/*/*.sh capstone/*.sh
+chmod +x labs/*/*.sh capstone/*.sh tools/*.sh
+git config core.fileMode false   # clones only: so chmod does not block "git pull" later
 cd labs/03-storage-sas-lifecycle
 cat README.md        # read the ticket first
 ./deploy.sh          # build it

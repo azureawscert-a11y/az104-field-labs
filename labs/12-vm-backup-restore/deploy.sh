@@ -14,7 +14,8 @@ require_login
 say "1. A small VM with a file we care about"
 az group create --name "$RG" --location "$LOC" --tags lab=12 -o none
 if ! az vm show -g "$RG" -n "$VM" -o none 2>/dev/null; then
-  az vm create --resource-group "$RG" --name "$VM" --image Ubuntu2204 --size "$VM_SIZE" \
+  # Standard security type: Trusted Launch VMs can only use an ENHANCED backup policy, and this lab copies DefaultPolicy.
+  az vm create --resource-group "$RG" --name "$VM" --image Ubuntu2204 --size "$VM_SIZE" --security-type Standard \
     --admin-username azureuser --generate-ssh-keys --public-ip-address "" \
     --os-disk-delete-option Delete --nic-delete-option Delete -o none
 fi
@@ -23,10 +24,9 @@ az vm run-command invoke -g "$RG" -n "$VM" --command-id RunShellScript \
 
 say "2. Recovery Services vault (same region as the VM)"
 az backup vault create --resource-group "$RG" --name "$VAULT" --location "$LOC" -o none
-# LAB ONLY: turn soft delete off so cleanup can remove the vault today.
-# In production leave soft delete ON: it protects backups from deletion for 14 days.
-az backup vault backup-properties set --resource-group "$RG" --name "$VAULT" \
-  --soft-delete-feature-state Disable -o none
+# Soft delete is always on for new vaults (secure by default): deleted backups are kept 14 days.
+echo "  soft delete: $(az rest --method get --url "$(az backup vault show -g "$RG" -n "$VAULT" --query id -o tsv)?api-version=2024-04-01" \
+  --query properties.securitySettings.softDeleteSettings.softDeleteState -o tsv)"
 
 say "3. Custom backup policy: copy DefaultPolicy, keep daily points for 14 days"
 if ! az backup policy show -g "$RG" --vault-name "$VAULT" -n "$POLICY" -o none 2>/dev/null; then

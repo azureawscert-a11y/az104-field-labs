@@ -92,9 +92,13 @@ backup_enable_once() {
   fi
 }
 
-# backup_cleanup RG VAULT VM  -> waits for running jobs, removes backup data and the vault, and fails if anything is left
+# backup_cleanup RG VAULT VM
+# Waits for running jobs, stops protection and deletes the backup data, then tries to delete the vault.
+# Since 2026 vaults are "secure by default": soft delete is always on, so deleted backup data is kept
+# for 14 days (no charge in that window) and nobody can purge it early. Until then the vault stays.
+# Returns 0 = vault gone, 2 = vault kept by soft delete (expected), 1 = something is wrong.
 backup_cleanup() {
-  local rg="$1" vault="$2" vm="$3" job left
+  local rg="$1" vault="$2" vm="$3" job active
   if ! az backup vault show -g "$rg" -n "$vault" -o none 2>/dev/null; then
     echo "  vault $vault not found, nothing to remove"; return 0
   fi
@@ -102,15 +106,44 @@ backup_cleanup() {
     echo "  waiting for running backup job $job (this can take 20 to 60 minutes)"
     az backup job wait -g "$rg" --vault-name "$vault" --name "$job" -o none
   done
-  if [[ "$(az backup item list -g "$rg" --vault-name "$vault" --backup-management-type AzureIaasVM \
-          --query "[?properties.friendlyName=='$vm'] | length(@)" -o tsv)" != "0" ]]; then
+  active="$(az backup item list -g "$rg" --vault-name "$vault" --backup-management-type AzureIaasVM \
+          --query "[?properties.friendlyName=='$vm' && properties.isScheduledForDeferredDelete!=\`true\`] | length(@)" -o tsv)"
+  if [[ "$active" != "0" ]]; then
+    echo "  stopping protection and deleting backup data (it moves to soft delete for 14 days)"
     az backup protection disable -g "$rg" --vault-name "$vault" --container-name "$vm" --item-name "$vm" \
-      --backup-management-type AzureIaasVM --delete-backup-data true --yes -o none
+      --backup-management-type AzureIaasVM --delete-backup-data true --yes -o none || return 1
   fi
-  left="$(az backup item list -g "$rg" --vault-name "$vault" --backup-management-type AzureIaasVM --query 'length(@)' -o tsv)"
-  if [[ "$left" != "0" ]]; then
-    echo "ERROR: $left backup item(s) still in $vault. Fix that before deleting the vault, then run cleanup.sh again." >&2
-    return 1
+  if az backup vault delete -g "$rg" --name "$vault" --yes --force -o none 2>/dev/null; then
+    echo "  vault $vault deleted"; return 0
   fi
-  az backup vault delete -g "$rg" --name "$vault" --yes -o none
+  if az backup vault show -g "$rg" -n "$vault" -o none 2>/dev/null; then return 2; fi
+  return 0
+}
+
+# delete_all_but_vault RG -> deletes every resource in RG except the Recovery Services vault.
+# Used while soft delete keeps the vault. Runs a few passes because some resources depend on others.
+delete_all_but_vault() {
+  local rg="$1" ids vms i
+  for i in 1 2 3 4 5; do
+    ids="$(az resource list -g "$rg" --query "[?type!='Microsoft.RecoveryServices/vaults'].id" -o tsv)"
+    [[ -z "$ids" ]] && { echo "  everything except the vault is deleted"; return 0; }
+    vms="$(grep -i '/virtualMachines/' <<< "$ids" || true)"
+    # shellcheck disable=SC2086  # word splitting on IDs is intended
+    [[ -n "$vms" ]] && az vm delete --ids $vms --yes -o none 2>/dev/null
+    echo "  pass $i: deleting $(wc -l <<< "$ids") resource(s)"
+    # shellcheck disable=SC2086
+    az resource delete --ids $ids -o none 2>/dev/null || true
+  done
+  echo "  some resources are still there: az resource list -g $rg -o table" >&2
+  return 1
+}
+
+# finish_vault_cleanup RG VAULT -> prints what happens next when soft delete keeps the vault
+finish_vault_cleanup() {
+  local when
+  when="$(date -u -d '+15 days' '+%B %d' 2>/dev/null || date -u -v+15d '+%B %d')"
+  echo
+  echo "Azure keeps vault $2 for 14 days because its backups are soft-deleted (secure by default)."
+  echo "That costs nothing. Everything else in $1 is deleted."
+  echo "Run ./cleanup.sh again on or after $when to delete the vault and the resource group."
 }

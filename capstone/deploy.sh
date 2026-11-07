@@ -47,7 +47,7 @@ az deployment group create --name capstone -g "$RG" --template-file "$HERE/main.
 
 say "4. Backup the app VM"
 az backup vault create -g "$RG" --name rsv-nwclinic --location "$LOC" --tags CostCenter=IT-100 -o none
-az backup vault backup-properties set -g "$RG" --name rsv-nwclinic --soft-delete-feature-state Disable -o none  # lab only
+# Soft delete is always on for new vaults (secure by default). cleanup.sh explains what that means.
 backup_enable_once "$RG" rsv-nwclinic vm-app01
 
 say "5. Protect the whole landing zone from accidental deletion"

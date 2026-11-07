@@ -25,7 +25,7 @@
 | Azure VMs, SQL/SAP HANA in VMs, Azure Files, on-premises (MARS/MABS), **Site Recovery** | Azure Disks, Azure Blobs, Azure Database for PostgreSQL, AKS |
 
 ## Explain it (interview)
-"Replication is not a backup: GRS copies a deletion to the second region too. A backup is a point-in-time copy with retention. I proved the backup by restoring from it, because a backup you have never restored is only a hope. In production soft delete stays on."
+"Replication is not a backup: GRS copies a deletion to the second region too. A backup is a point-in-time copy with retention. I proved the backup by restoring from it, because a backup you have never restored is only a hope. Soft delete is now always on, so even an attacker with admin rights cannot wipe the backups for 14 days."
 
 ## Cleanup
-`./cleanup.sh` waits for any running backup job, stops protection, deletes the backup data, then deletes the vault. If anything is left in the vault it stops with an error instead of pretending it worked, so you are never billed for a vault you think is gone. If the first backup is still running, cleanup can take up to an hour.
+`./cleanup.sh` waits for any running backup job, stops protection and deletes the backup data. Since 2026 every vault is **secure by default**: soft delete is always on and cannot be turned off, so Azure keeps the deleted backup for 14 days (free) and the vault cannot be removed until then. Cleanup deletes everything else in the group now and tells you the date to run `./cleanup.sh` again, which then removes the vault and the group. If the first backup is still running, cleanup can take up to an hour.
