@@ -95,8 +95,9 @@ backup_enable_once() {
 # backup_cleanup RG VAULT VM
 # Waits for running jobs, stops protection and deletes the backup data, then tries to delete the vault.
 # Since 2026 vaults are "secure by default": soft delete is always on, so deleted backup data is kept
-# for 14 days (no charge in that window) and nobody can purge it early. Until then the vault stays.
-# Returns 0 = vault gone, 2 = vault kept by soft delete (expected), 1 = something is wrong.
+# for 14 days (no charge in that window) and nobody can purge it early. "vault delete --force" still
+# works: Azure moves the vault and its soft-deleted backup into a 14-day soft-deleted state (tested Nov 2026).
+# Returns 0 = vault gone, 2 = Azure refused and kept the vault (fallback path), 1 = something is wrong.
 backup_cleanup() {
   local rg="$1" vault="$2" vm="$3" job active
   if ! az backup vault show -g "$rg" -n "$vault" -o none 2>/dev/null; then

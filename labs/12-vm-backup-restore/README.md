@@ -1,6 +1,6 @@
 # Lab 12: Back up a VM and get a file back
 
-**Ticket INC-1012 · Priority 1 · 60 minutes (mostly waiting) · about $0.10 per hour**
+**Ticket INC-1012 · Priority 1 · 90 minutes (mostly waiting; the first backup took 56 minutes in our test) · about $0.10 per hour**
 
 > "Our billing server has no backup. Turn it on today. And show me you can actually restore something." (Finance director)
 
@@ -28,4 +28,4 @@
 "Replication is not a backup: GRS copies a deletion to the second region too. A backup is a point-in-time copy with retention. I proved the backup by restoring from it, because a backup you have never restored is only a hope. Soft delete is now always on, so even an attacker with admin rights cannot wipe the backups for 14 days."
 
 ## Cleanup
-`./cleanup.sh` waits for any running backup job, stops protection and deletes the backup data. Since 2026 every vault is **secure by default**: soft delete is always on and cannot be turned off, so Azure keeps the deleted backup for 14 days (free) and the vault cannot be removed until then. Cleanup deletes everything else in the group now and tells you the date to run `./cleanup.sh` again, which then removes the vault and the group. If the first backup is still running, cleanup can take up to an hour.
+`./cleanup.sh` waits for any running backup job, stops protection and deletes the backup data. Since 2026 every vault is **secure by default**: soft delete is always on and cannot be turned off, so Azure keeps the deleted backup for 14 days (free). Cleanup then force-deletes the vault; Azure moves it into the same 14-day soft-deleted state and the resource group is removed the same day (tested November 2026). If Azure ever refuses the vault delete, cleanup removes everything else and tells you the date to run it again. If the first backup is still running, cleanup can take up to an hour.
