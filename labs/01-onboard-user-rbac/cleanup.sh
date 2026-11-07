@@ -15,6 +15,6 @@ if [[ -n "$GROUP_ID" && -n "$RG_ID" ]]; then
   az role assignment delete --assignee "$GROUP_ID" --role "Reader" --scope "$RG_ID" || true
 fi
 az ad user delete --id "$UPN" 2>/dev/null || true
-[[ -n "$GROUP_ID" ]] && az ad group delete --group "$GROUP_ID" || true
+if [[ -n "$GROUP_ID" ]]; then az ad group delete --group "$GROUP_ID" || true; fi
 az group delete --name "$RG" --yes --no-wait 2>/dev/null || true
 echo "Cleanup started. Deleted users stay in Entra ID > Deleted users for 30 days (you can restore them)."

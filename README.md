@@ -18,7 +18,7 @@ Each lab is a realistic help-desk or project ticket that a junior Azure administ
 ```bash
 # In Cloud Shell: Manage files > Upload > az104-field-labs.zip, then:
 unzip az104-field-labs.zip -d az104-field-labs && cd az104-field-labs
-# (or git clone the GitHub link from the book's download notes, if published)
+# or clone it: git clone https://github.com/azureawscert-a11y/az104-field-labs.git
 chmod +x labs/*/*.sh capstone/*.sh
 cd labs/03-storage-sas-lifecycle
 cat README.md        # read the ticket first
