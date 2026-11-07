@@ -7,11 +7,7 @@ param location string = resourceGroup().location
 @description('VM name')
 param vmName string = 'vm-web01'
 
-@description('VM size. B2ats_v2 (Bsv2 series) is a cheap burstable size for labs.')
-@allowed([
-  'Standard_B2ats_v2'
-  'Standard_B2als_v2'
-])
+@description('VM size. B2ats_v2 (Bsv2 series) is a cheap burstable size for labs. deploy.sh passes the size that works in your subscription.')
 param vmSize string = 'Standard_B2ats_v2'
 
 @description('Admin user name for SSH')
@@ -125,6 +121,8 @@ resource vm 'Microsoft.Compute/virtualMachines@2024-07-01' = {
       }
     }
     storageProfile: {
+      // v6 sizes only support NVMe disks; older sizes use SCSI
+      diskControllerType: contains(vmSize, '_v6') ? 'NVMe' : 'SCSI'
       imageReference: {
         publisher: 'Canonical'
         offer: 'ubuntu-24_04-lts'

@@ -3,7 +3,14 @@
 # shellcheck disable=SC2034
 
 FAILS=0
+# Region and VM sizes. tools/check-region.sh finds values that work in YOUR subscription
+# and saves them to ~/.az104labs. Anything you set on the command line wins, for example:
+#   LOC=eastus2 ./deploy.sh
+# shellcheck disable=SC1091
+[[ -f "$HOME/.az104labs" ]] && source "$HOME/.az104labs"
 LOC="${LOC:-canadacentral}"
+VM_SIZE="${VM_SIZE:-Standard_B2ats_v2}"          # small VM used by labs 05, 09, 10, 12 and the capstone
+VM_SIZE_BIG="${VM_SIZE_BIG:-Standard_B2als_v2}"  # the size lab 06 resizes up to
 
 say()  { printf '\n\033[1;34m==> %s\033[0m\n' "$1"; }
 pass() { printf '  \033[32mPASS\033[0m  %s\n' "$1"; }

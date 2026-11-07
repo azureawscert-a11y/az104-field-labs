@@ -16,8 +16,8 @@ expect "VM is running" \
   "$(az vm show --resource-group "$RG" --name vm-web01 --show-details --query powerState -o tsv)" "VM running"
 expect "VM has NO public IP" \
   "$(az vm show --resource-group "$RG" --name vm-web01 --show-details --query publicIps -o tsv)" ""
-expect "VM size is Standard_B2ats_v2" \
-  "$(az vm show --resource-group "$RG" --name vm-web01 --query hardwareProfile.vmSize -o tsv)" "Standard_B2ats_v2"
+expect "VM size is $VM_SIZE" \
+  "$(az vm show --resource-group "$RG" --name vm-web01 --query hardwareProfile.vmSize -o tsv)" "$VM_SIZE"
 OS="$(az vm run-command invoke --resource-group "$RG" --name vm-web01 --command-id RunShellScript \
   --scripts "grep PRETTY_NAME /etc/os-release" --query "value[0].message" -o tsv 2>/dev/null)"
 if [[ "$OS" == *Ubuntu* ]]; then pass "run-command reached the guest OS (Ubuntu)"; else fail "run-command did not return Ubuntu"; fi

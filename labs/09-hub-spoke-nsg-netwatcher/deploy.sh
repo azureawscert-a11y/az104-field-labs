@@ -37,7 +37,7 @@ say "4. One small VM in each VNet, no public IPs"
 for pair in "vm-hub01:vnet-hub:snet-shared" "vm-app01:vnet-spoke1:snet-app"; do
   IFS=: read -r VM VNET SUBNET <<< "$pair"
   if ! az vm show -g "$RG" -n "$VM" -o none 2>/dev/null; then
-    az vm create --resource-group "$RG" --name "$VM" --image Ubuntu2204 --size Standard_B2ats_v2 \
+    az vm create --resource-group "$RG" --name "$VM" --image Ubuntu2204 --size "$VM_SIZE" \
       --vnet-name "$VNET" --subnet "$SUBNET" --public-ip-address "" --nsg "" \
       --admin-username azureuser --generate-ssh-keys \
       --os-disk-delete-option Delete --nic-delete-option Delete -o none

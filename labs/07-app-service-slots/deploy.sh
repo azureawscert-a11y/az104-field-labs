@@ -10,9 +10,10 @@ require_login
 APP="app-lab07-$(suffix)"
 TMP="$(mktemp -d)"
 
-say "1. App Service plan S1 (Standard is the lowest tier with deployment slots)"
+say "1. Windows App Service plan S1 (Standard is the lowest tier with deployment slots)"
+# Newer Azure CLI versions create LINUX plans by default, so ask for Windows explicitly.
 az group create --name "$RG" --location "$LOC" --tags lab=07 -o none
-az appservice plan create --name "$PLAN" --resource-group "$RG" --location "$LOC" --sku S1 -o none
+az appservice plan create --name "$PLAN" --resource-group "$RG" --location "$LOC" --sku S1 --is-linux false -o none
 
 say "2. Web app (Windows plan, serves a static index.html)"
 az webapp create --name "$APP" --resource-group "$RG" --plan "$PLAN" -o none

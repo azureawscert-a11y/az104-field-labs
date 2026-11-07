@@ -28,9 +28,9 @@ fi
 
 LOC_POLICY="$(az policy definition list --query "[?displayName=='Allowed locations'].name | [0]" -o tsv)"
 az policy assignment show --name cap-allowed-locations --scope "$RG_ID" -o none 2>/dev/null || \
-az policy assignment create --name cap-allowed-locations --display-name "Canada regions only (capstone)" \
+az policy assignment create --name cap-allowed-locations --display-name "Approved regions only (capstone)" \
   --policy "$LOC_POLICY" --scope "$RG_ID" \
-  --params "{\"listOfAllowedLocations\":{\"value\":[\"canadacentral\",\"canadaeast\",\"global\"]}}" -o none
+  --params "{\"listOfAllowedLocations\":{\"value\":[\"$LOC\",\"global\"]}}" -o none
 
 say "2. RBAC: an ops group gets Virtual Machine Contributor on the resource group"
 if [[ -z "$(az ad group list --display-name grp-clinic-ops --query '[0].id' -o tsv)" ]]; then
@@ -41,9 +41,9 @@ assign_role "$OPS_ID" Group "Virtual Machine Contributor" "$RG_ID"
 
 say "3. Infrastructure from Bicep (preview, then deploy)"
 az deployment group what-if -g "$RG" --template-file "$HERE/main.bicep" \
-  --parameters adminPublicKey="$(cat "$KEYFILE")" alertEmail="$EMAIL" --result-format ResourceIdOnly
+  --parameters adminPublicKey="$(cat "$KEYFILE")" alertEmail="$EMAIL" vmSize="$VM_SIZE" --result-format ResourceIdOnly
 az deployment group create --name capstone -g "$RG" --template-file "$HERE/main.bicep" \
-  --parameters adminPublicKey="$(cat "$KEYFILE")" alertEmail="$EMAIL" -o none
+  --parameters adminPublicKey="$(cat "$KEYFILE")" alertEmail="$EMAIL" vmSize="$VM_SIZE" -o none
 
 say "4. Backup the app VM"
 az backup vault create -g "$RG" --name rsv-nwclinic --location "$LOC" --tags CostCenter=IT-100 -o none

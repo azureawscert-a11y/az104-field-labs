@@ -18,22 +18,22 @@ az group create --name "$RG" --location "$LOC" --tags lab=05 -o none
 
 say "2. WHAT-IF: preview what Azure would create (nothing is deployed yet)"
 az deployment group what-if --resource-group "$RG" --template-file "$HERE/main.bicep" \
-  --parameters adminPublicKey="$PUBKEY"
+  --parameters adminPublicKey="$PUBKEY" vmSize="$VM_SIZE"
 
 say "3. Deploy for real"
 az deployment group create --name lab05-v1 --resource-group "$RG" \
-  --template-file "$HERE/main.bicep" --parameters adminPublicKey="$PUBKEY" \
+  --template-file "$HERE/main.bicep" --parameters adminPublicKey="$PUBKEY" vmSize="$VM_SIZE" \
   --query "properties.outputs" -o json
 
 say "4. Change one thing (env tag) and preview again: what-if shows only the difference"
 az deployment group what-if --resource-group "$RG" --template-file "$HERE/main.bicep" \
-  --parameters adminPublicKey="$PUBKEY" tags='{"lab":"05","env":"test"}'
+  --parameters adminPublicKey="$PUBKEY" vmSize="$VM_SIZE" tags='{"lab":"05","env":"test"}'
 
 say "5. Modify the deployment: add a data disk (template change), preview, then deploy v2"
 az deployment group what-if --resource-group "$RG" --template-file "$HERE/main.bicep" \
-  --parameters adminPublicKey="$PUBKEY" addDataDisk=true
+  --parameters adminPublicKey="$PUBKEY" vmSize="$VM_SIZE" addDataDisk=true
 az deployment group create --name lab05-v2 --resource-group "$RG" \
-  --template-file "$HERE/main.bicep" --parameters adminPublicKey="$PUBKEY" addDataDisk=true \
+  --template-file "$HERE/main.bicep" --parameters adminPublicKey="$PUBKEY" vmSize="$VM_SIZE" addDataDisk=true \
   --query "properties.outputs" -o json
 
 echo "Done. Next: ./verify.sh"

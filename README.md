@@ -31,7 +31,7 @@ Then try it yourself: read `deploy.sh`, delete the lab, and rebuild it by typing
 
 ## Safety rules
 
-- Every lab creates **one resource group** named `rg-az104-labNN`. `cleanup.sh` deletes that group and everything billable in it. Azure itself may leave two **empty, free** helper groups behind: `AzureBackupRG_<region>_1` (labs 12 and capstone, created by Azure Backup for restore points) and `NetworkWatcherRG` (labs 09 and capstone). Delete them when you finish all labs with `az group delete -n AzureBackupRG_canadacentral_1 --yes` and `az group delete -n NetworkWatcherRG --yes` (Network Watcher is recreated automatically when needed).
+- Every lab creates **one resource group** named `rg-az104-labNN`. `cleanup.sh` deletes that group and everything billable in it. Azure itself may leave two **empty, free** helper groups behind: `AzureBackupRG_<region>_1` (labs 12 and capstone, created by Azure Backup for restore points) and `NetworkWatcherRG` (labs 09 and capstone). Delete them when you finish all labs with `az group delete -n AzureBackupRG_<region>_1 --yes` and `az group delete -n NetworkWatcherRG --yes` (Network Watcher is recreated automatically when needed).
 - Run `cleanup.sh` the same day. Several labs create VMs, App Service plans or backup vaults that cost money every hour.
 - Never paste real passwords, keys or SAS tokens into GitHub. The scripts print secrets only to your terminal.
 - `deploy.sh` stops on the first error. Read the message, fix the cause, and run it again: deploy scripts are safe to re-run. `verify.sh` and `cleanup.sh` keep going and report every problem they find.
@@ -44,19 +44,28 @@ Then try it yourself: read `deploy.sh`, delete the lab, and rebuild it by typing
 | 02 | Enforce a CostCenter tag with Azure Policy and protect the group with a lock | Governance | Free |
 | 03 | Share files with a partner using a revocable SAS + lifecycle rules | Storage access | < $0.05 |
 | 04 | Team file share with snapshots and soft delete, restore a deleted file | Azure Files | < $0.05 |
-| 05 | Deploy a VM from Bicep, modify the template, preview with what-if | ARM/Bicep, VMs | ~ $0.05 per hour |
-| 06 | Resize a VM and add a data disk | VM sizes, disks | ~ $0.10 per hour |
+| 05 | Deploy a VM from Bicep, modify the template, preview with what-if | ARM/Bicep, VMs | $0.01 to $0.10 per hour (size) |
+| 06 | Resize a VM and add a data disk | VM sizes, disks | $0.02 to $0.15 per hour |
 | 07 | Zero-downtime release with an App Service deployment slot swap | App Service | ~ $0.10 per hour (S1) |
 | 08 | Run an image from Azure Container Registry on ACI and Container Apps | Containers | < $0.20 |
-| 09 | Hub-spoke peering, NSG, and prove traffic with Network Watcher | Networking | ~ $0.05 per hour |
-| 10 | Lock a storage account to a private endpoint with private DNS | Secure access | ~ $0.05 per hour |
+| 09 | Hub-spoke peering, NSG, and prove traffic with Network Watcher | Networking | $0.02 to $0.20 per hour (2 VMs) |
+| 10 | Lock a storage account to a private endpoint with private DNS | Secure access | $0.03 to $0.12 per hour |
 | 11 | Send logs to Log Analytics, query with KQL, alert to email | Monitoring | < $0.05 |
 | 12 | Back up a VM with a custom policy and restore a file | Backup | ~ $0.10 per hour |
 | Capstone | Mini landing zone for a small company | All domains | ~ $0.15 per hour |
 
-VM labs use the current Bsv2 sizes (`Standard_B2ats_v2`, resized to `Standard_B2als_v2` in lab 06). The older B1s/B2s sizes are being retired and many new subscriptions cannot deploy them. Check yours with `az vm list-skus -l canadacentral --size Standard_B2 -o table`.
+## Before the first lab: two setup scripts
 
-Costs are rough estimates in USD for canadacentral at the time of writing and change over time. Check the Azure pricing calculator and your budget alert.
+```bash
+EMAIL=you@example.com bash tools/setup-subscription.sh   # providers + US$20 budget alert
+bash tools/check-region.sh                               # finds a region and VM size YOUR subscription can use
+```
+
+New subscriptions are often blocked from small VM sizes in busy regions (`SkuNotAvailable`) or start with 0 quota for some VM families (`QuotaExceeded`), and some have no App Service Standard quota in a region. In our own test on a brand-new Pay-As-You-Go subscription, Canada Central allowed none of the lab VM sizes, while East US and West US 2 allowed `Standard_D2als_v6`, and only West US 2 allowed an S1 App Service plan.
+
+`check-region.sh` uses `az vm create --validate` (Azure's preflight check, creates nothing) to try the sizes cheapest first: `Standard_B2ats_v2`, `B2s`, `D2als_v6`, `D2as_v5`, `D2as_v4`. It saves the first region that works to `~/.az104labs`, and every lab reads it. Override any value for one run: `LOC=eastus2 ./deploy.sh`.
+
+Costs are rough USD estimates at the time of writing (low end: B2ats_v2, high end: D2-class v6 sizes) and change over time. Check the Azure pricing calculator and your budget alert.
 
 ## Lint
 

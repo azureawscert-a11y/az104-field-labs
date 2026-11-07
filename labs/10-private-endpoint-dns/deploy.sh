@@ -37,7 +37,7 @@ az network private-endpoint dns-zone-group create --resource-group "$RG" \
 
 say "5. A test VM inside the VNet (no public IP)"
 if ! az vm show -g "$RG" -n vm-test01 -o none 2>/dev/null; then
-  az vm create --resource-group "$RG" --name vm-test01 --image Ubuntu2204 --size Standard_B2ats_v2 \
+  az vm create --resource-group "$RG" --name vm-test01 --image Ubuntu2204 --size "$VM_SIZE" \
     --vnet-name "$VNET" --subnet snet-app --public-ip-address "" --nsg "" \
     --admin-username azureuser --generate-ssh-keys \
     --os-disk-delete-option Delete --nic-delete-option Delete -o none

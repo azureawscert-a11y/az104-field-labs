@@ -11,6 +11,9 @@ param adminPublicKey string
 @description('Admin user name for the app VM')
 param adminUsername string = 'azureuser'
 
+@description('VM size for vm-app01. deploy.sh passes the size that works in your subscription.')
+param vmSize string = 'Standard_B2ats_v2'
+
 @description('Email for alerts')
 param alertEmail string
 
@@ -279,7 +282,7 @@ resource vmApp 'Microsoft.Compute/virtualMachines@2024-07-01' = {
   tags: tags
   properties: {
     hardwareProfile: {
-      vmSize: 'Standard_B2ats_v2'
+      vmSize: vmSize
     }
     osProfile: {
       computerName: 'vm-app01'
@@ -297,6 +300,8 @@ resource vmApp 'Microsoft.Compute/virtualMachines@2024-07-01' = {
       }
     }
     storageProfile: {
+      // v6 sizes only support NVMe disks; older sizes use SCSI
+      diskControllerType: contains(vmSize, '_v6') ? 'NVMe' : 'SCSI'
       imageReference: {
         publisher: 'Canonical'
         offer: 'ubuntu-24_04-lts'

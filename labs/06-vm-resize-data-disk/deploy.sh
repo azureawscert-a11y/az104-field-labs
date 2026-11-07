@@ -11,17 +11,19 @@ require_login
 say "1. Starting point: a small VM with no public IP"
 az group create --name "$RG" --location "$LOC" --tags lab=06 -o none
 if ! az vm show --resource-group "$RG" --name "$VM" -o none 2>/dev/null; then
-  az vm create --resource-group "$RG" --name "$VM" --image Ubuntu2204 --size Standard_B2ats_v2 \
+  az vm create --resource-group "$RG" --name "$VM" --image Ubuntu2204 --size "$VM_SIZE" \
     --admin-username azureuser --generate-ssh-keys --public-ip-address "" \
     --os-disk-delete-option Delete --nic-delete-option Delete -o none
 fi
 
 say "2. Which sizes can this VM move to without changing hardware cluster?"
 az vm list-vm-resize-options --resource-group "$RG" --name "$VM" \
-  --query "[?starts_with(name,'Standard_B')].{size:name, vCPUs:numberOfCores, memMB:memoryInMB}" -o table
+  --query "[?numberOfCores<=\`2\`].{size:name, vCPUs:numberOfCores, memMB:memoryInMB} | [:12]" -o table
 
-say "3. Resize B2ats_v2 -> B2als_v2 (the VM restarts, plan a maintenance window)"
-az vm resize --resource-group "$RG" --name "$VM" --size Standard_B2als_v2 -o none
+say "3. Resize $VM_SIZE -> $VM_SIZE_BIG (the VM restarts, plan a maintenance window)"
+if [[ "$(az vm show -g "$RG" -n "$VM" --query hardwareProfile.vmSize -o tsv)" != "$VM_SIZE_BIG" ]]; then
+  az vm resize --resource-group "$RG" --name "$VM" --size "$VM_SIZE_BIG" -o none
+fi
 
 say "4. Attach a new 8 GiB Standard SSD data disk at LUN 0"
 if [[ "$(az vm show --resource-group "$RG" --name "$VM" --query 'length(storageProfile.dataDisks)' -o tsv)" == "0" ]]; then
@@ -32,12 +34,16 @@ fi
 say "5. Partition, format and mount the disk inside Linux (run-command, no SSH)"
 # shellcheck disable=SC2016  # the script runs inside the VM, so $ must not expand here
 az vm run-command invoke --resource-group "$RG" --name "$VM" --command-id RunShellScript --scripts '
-# The data disk at LUN 0 always appears at this stable path, whatever the disk sizes.
-DISK=$(readlink -f /dev/disk/azure/scsi1/lun0)
-if ! lsblk -no MOUNTPOINT "${DISK}1" 2>/dev/null | grep -q /data; then
+# Find the data disk at LUN 0. SCSI sizes (B, Dv4...) use /dev/disk/azure/scsi1/lun0;
+# newer NVMe sizes (v6) use /dev/disk/azure/data/by-lun/0 or /dev/nvme0n2.
+for p in /dev/disk/azure/data/by-lun/0 /dev/disk/azure/scsi1/lun0 /dev/nvme0n2; do
+  [ -e "$p" ] && DISK=$(readlink -f "$p") && break
+done
+PART="${DISK}1"; case "$DISK" in *nvme*) PART="${DISK}p1";; esac
+if ! lsblk -no MOUNTPOINT "$PART" 2>/dev/null | grep -q /data; then
   parted "$DISK" --script mklabel gpt mkpart primary ext4 0% 100%
-  sleep 2; mkfs.ext4 -q "${DISK}1"; mkdir -p /data
-  echo "UUID=$(blkid -s UUID -o value ${DISK}1) /data ext4 defaults,nofail 0 2" >> /etc/fstab
+  sleep 2; mkfs.ext4 -q "$PART"; mkdir -p /data
+  echo "UUID=$(blkid -s UUID -o value $PART) /data ext4 defaults,nofail 0 2" >> /etc/fstab
   mount -a
 fi
 df -h /data' --query "value[0].message" -o tsv

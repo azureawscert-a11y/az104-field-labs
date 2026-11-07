@@ -5,7 +5,7 @@
 > "The reporting server keeps freezing and the disk is almost full. Can you give it more power and more space tonight?" (App owner)
 
 ## Goal
-- Resize `vm-app01` from **Standard_B2ats_v2** to **Standard_B2als_v2**.
+- Resize `vm-app01` from **Standard_B2ats_v2** to **Standard_B2als_v2** (or the pair `tools/check-region.sh` chose for your subscription).
 - Attach a new 8 GiB **Standard SSD** data disk at LUN 0.
 - Partition, format and mount it at `/data` with run-command.
 

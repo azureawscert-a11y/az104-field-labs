@@ -3,6 +3,7 @@
 #   1. registers the resource providers the labs use (new subscriptions start with few registered)
 #   2. creates a monthly budget of 20 (in your billing currency) with email alerts at 50, 80 and 100%
 #   3. shows your vCPU quota for the lab region
+# Then run tools/check-region.sh before the first VM lab.
 # Usage: EMAIL=you@example.com bash tools/setup-subscription.sh
 set -uo pipefail
 EMAIL="${EMAIL:-}"
@@ -44,4 +45,4 @@ done
 
 echo "4. vCPU quota in $LOC (labs need about 2 to 4 vCPUs at a time)"
 az vm list-usage --location "$LOC" -o table | grep -iE "Total Regional vCPUs|BSv2" || true
-echo "Setup finished."
+echo "Setup finished. Next: bash tools/check-region.sh  (finds a region and VM size your subscription can use)"

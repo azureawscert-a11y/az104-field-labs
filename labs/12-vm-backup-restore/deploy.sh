@@ -14,7 +14,7 @@ require_login
 say "1. A small VM with a file we care about"
 az group create --name "$RG" --location "$LOC" --tags lab=12 -o none
 if ! az vm show -g "$RG" -n "$VM" -o none 2>/dev/null; then
-  az vm create --resource-group "$RG" --name "$VM" --image Ubuntu2204 --size Standard_B2ats_v2 \
+  az vm create --resource-group "$RG" --name "$VM" --image Ubuntu2204 --size "$VM_SIZE" \
     --admin-username azureuser --generate-ssh-keys --public-ip-address "" \
     --os-disk-delete-option Delete --nic-delete-option Delete -o none
 fi

@@ -17,8 +17,9 @@ expect "delete lock on the RG" "$(az lock list -g "$RG" --query "length(@)" -o t
 OSDISK="$(az vm show -g "$RG" -n vm-app01 --query storageProfile.osDisk.name -o tsv)"
 expect "OS disk inherited CostCenter=IT-100 from the RG (Modify policy)" \
   "$(az disk show -g "$RG" -n "$OSDISK" --query tags.CostCenter -o tsv)" "IT-100"
-expect_fail "a resource in a non-Canadian region is denied" \
-  az network nsg create -g "$RG" -n nsg-should-fail --location eastus --tags CostCenter=IT-100
+OTHER="westeurope"; [[ "$LOC" == "westeurope" ]] && OTHER="eastus"
+expect_fail "a resource outside the approved region ($OTHER) is denied" \
+  az network nsg create -g "$RG" -n nsg-should-fail --location "$OTHER" --tags CostCenter=IT-100
 
 say "Network"
 expect "hub-spoke peering Connected" \
