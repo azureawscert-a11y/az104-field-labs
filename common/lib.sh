@@ -219,6 +219,21 @@ backup_enable_once() {
   fi
 }
 
+# vault_count RG VAULT -> prints 1 if the Recovery Services vault exists, 0 if it (or its group) does not.
+# Returns 1 if Azure could not be asked (for example an expired sign-in), so that is never read as "gone".
+vault_count() {
+  local exists n
+  exists="$(az group exists -n "$1")" || return 1
+  case "$exists" in
+    false) echo 0; return 0 ;;
+    true) ;;
+    *) return 1 ;;
+  esac
+  n="$(az backup vault list -g "$1" --query "[?name=='$2'] | length(@)" -o tsv)" || return 1
+  [[ "$n" == 0 || "$n" == 1 ]] || return 1
+  echo "$n"
+}
+
 # backup_cleanup RG VAULT VM
 # Waits for running jobs, stops protection and deletes the backup data, then tries to delete the vault.
 # Since 2026 vaults are "secure by default": soft delete is always on, so deleted vault backup data is
@@ -227,10 +242,9 @@ backup_enable_once() {
 # the vault and its soft-deleted backup into a 14-day soft-deleted state (tested Nov 2026).
 # Returns 0 = vault gone, 2 = Azure refused and kept the vault (fallback path), 1 = something is wrong.
 backup_cleanup() {
-  local rg="$1" vault="$2" vm="$3" jobs job active sub
-  if ! az backup vault show -g "$rg" -n "$vault" -o none 2>/dev/null; then
-    echo "  vault $vault not found, nothing to remove"; return 0
-  fi
+  local rg="$1" vault="$2" vm="$3" jobs job active sub n
+  n="$(vault_count "$rg" "$vault")" || { echo "Could not check whether vault $vault exists. Are you signed in? (az login)" >&2; return 1; }
+  if [[ "$n" == 0 ]]; then echo "  vault $vault not found, nothing to remove"; return 0; fi
   jobs="$(az backup job list -g "$rg" --vault-name "$vault" --status InProgress --query "[].name" -o tsv)" || return 1
   for job in $jobs; do
     echo "  waiting for running backup job $job (this can take 20 to 60 minutes)"
@@ -249,8 +263,9 @@ backup_cleanup() {
   if az backup vault delete -g "$rg" --name "$vault" --yes --force -o none 2>/dev/null; then
     echo "  vault $vault deleted"; return 0
   fi
-  if az backup vault show -g "$rg" -n "$vault" -o none 2>/dev/null; then return 2; fi
-  return 0
+  n="$(vault_count "$rg" "$vault")" || { echo "Could not check whether vault $vault was deleted." >&2; return 1; }
+  if [[ "$n" == 0 ]]; then return 0; fi
+  return 2
 }
 
 # delete_all_but_vault RG -> deletes every resource in RG except the Recovery Services vault.
