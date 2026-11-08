@@ -63,12 +63,15 @@ done
 [ -n "$DISK" ] || { echo "ERROR: no data disk found at LUN 0"; exit 1; }
 PART="${DISK}1"; case "$DISK" in *nvme*) PART="${DISK}p1";; esac
 if [ ! -e "$PART" ]; then
-  # No partition 1. Only partition a disk that is truly blank: "blkid -p" exits 2 when it finds
-  # no filesystem or partition table at all. Anything else, stop and touch nothing.
-  rc=0; blkid -p "$DISK" >/dev/null 2>&1 || rc=$?
-  if [ "$rc" -ne 2 ]; then
-    echo "ERROR: $DISK has no partition 1 but is not blank (blkid exit $rc). Not touching it."; exit 1
-  fi
+  # No partition 1. Only partition a disk that is provably blank, or stop and touch nothing:
+  # 1) "blkid -p" exits 2 when it finds no filesystem or partition table. It also exits 2 when it
+  #    cannot open the disk, so 2) read the first MiB ourselves: a new Azure disk is all zeros, and
+  #    every partition table or filesystem writes something there. A failed read stops the script.
+  rc=0; blkid -p "$DISK" >/dev/null || rc=$?
+  [ "$rc" -eq 2 ] || { echo "ERROR: $DISK has no partition 1 but is not blank (blkid exit $rc). Not touching it."; exit 1; }
+  rm -f /tmp/lab06-head.bin; dd if="$DISK" of=/tmp/lab06-head.bin bs=1M count=1 status=none
+  [ "$(wc -c < /tmp/lab06-head.bin)" -eq 1048576 ] || { echo "ERROR: could not read the start of $DISK. Not touching it."; exit 1; }
+  [ "$(tr -d "\\000" < /tmp/lab06-head.bin | wc -c)" -eq 0 ] || { echo "ERROR: $DISK is not blank (data in its first MiB). Not touching it."; exit 1; }
   parted "$DISK" --script mklabel gpt mkpart primary ext4 0% 100%
   partprobe "$DISK"; udevadm settle
 fi
