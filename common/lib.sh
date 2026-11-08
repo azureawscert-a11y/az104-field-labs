@@ -167,6 +167,10 @@ delete_group() {
 # this VM are deleted (names alone could match another VM with the same or a longer name).
 delete_vm_restore_points() {
   local vmid="$1" ids id src n=0
+  # Refuse a malformed ID (for example an empty subscription part), so nothing is matched by mistake.
+  if [[ ! "$vmid" =~ ^/subscriptions/[^/]+/resourceGroups/[^/]+/providers/Microsoft\.Compute/virtualMachines/[^/]+$ ]]; then
+    echo "delete_vm_restore_points: '$vmid' is not a full VM resource ID" >&2; return 1
+  fi
   ids="$(az resource list --resource-type Microsoft.Compute/restorePointCollections \
         --query "[?starts_with(name, 'AzureBackup_')].id" -o tsv)" || return 1
   for id in $ids; do
@@ -223,22 +227,25 @@ backup_enable_once() {
 # the vault and its soft-deleted backup into a 14-day soft-deleted state (tested Nov 2026).
 # Returns 0 = vault gone, 2 = Azure refused and kept the vault (fallback path), 1 = something is wrong.
 backup_cleanup() {
-  local rg="$1" vault="$2" vm="$3" job active
+  local rg="$1" vault="$2" vm="$3" jobs job active sub
   if ! az backup vault show -g "$rg" -n "$vault" -o none 2>/dev/null; then
     echo "  vault $vault not found, nothing to remove"; return 0
   fi
-  for job in $(az backup job list -g "$rg" --vault-name "$vault" --status InProgress --query "[].name" -o tsv); do
+  jobs="$(az backup job list -g "$rg" --vault-name "$vault" --status InProgress --query "[].name" -o tsv)" || return 1
+  for job in $jobs; do
     echo "  waiting for running backup job $job (this can take 20 to 60 minutes)"
-    az backup job wait -g "$rg" --vault-name "$vault" --name "$job" -o none
+    az backup job wait -g "$rg" --vault-name "$vault" --name "$job" -o none || return 1
   done
   active="$(az backup item list -g "$rg" --vault-name "$vault" --backup-management-type AzureIaasVM \
-          --query "[?properties.friendlyName=='$vm' && properties.isScheduledForDeferredDelete!=\`true\`] | length(@)" -o tsv)"
+          --query "[?properties.friendlyName=='$vm' && properties.isScheduledForDeferredDelete!=\`true\`] | length(@)" -o tsv)" || return 1
   if [[ "$active" != "0" ]]; then
     echo "  stopping protection and deleting backup data (it moves to soft delete for 14 days)"
     az backup protection disable -g "$rg" --vault-name "$vault" --container-name "$vm" --item-name "$vm" \
       --backup-management-type AzureIaasVM --delete-backup-data true --yes -o none || return 1
   fi
-  delete_vm_restore_points "/subscriptions/$(az account show --query id -o tsv)/resourceGroups/$rg/providers/Microsoft.Compute/virtualMachines/$vm" || return 1
+  sub="$(az account show --query id -o tsv)" || return 1
+  [[ -n "$sub" ]] || { echo "Could not read the subscription ID. Are you signed in? (az login)" >&2; return 1; }
+  delete_vm_restore_points "/subscriptions/$sub/resourceGroups/$rg/providers/Microsoft.Compute/virtualMachines/$vm" || return 1
   if az backup vault delete -g "$rg" --name "$vault" --yes --force -o none 2>/dev/null; then
     echo "  vault $vault deleted"; return 0
   fi
