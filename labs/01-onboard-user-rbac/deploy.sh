@@ -30,7 +30,7 @@ else
 fi
 
 say "3. Create the security group and add the user"
-GROUP_ID="$(az ad group list --display-name "$GROUP" --query '[0].id' -o tsv)"
+GROUP_ID="$(group_id_exact "$GROUP")"
 if [[ -z "$GROUP_ID" ]]; then
   GROUP_ID="$(az ad group create --display-name "$GROUP" --mail-nickname "$GROUP" --query id -o tsv)"
 fi

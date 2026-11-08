@@ -11,7 +11,7 @@ UPN="priya.lab01@$(tenant_domain)"
 
 say "Checking lab 01"
 check "user $UPN exists" az ad user show --id "$UPN"
-GROUP_ID="$(az ad group show --group "$GROUP" --query id -o tsv 2>/dev/null)"
+GROUP_ID="$(group_id_exact "$GROUP" 2>/dev/null)"
 USER_ID="$(az ad user show --id "$UPN" --query id -o tsv 2>/dev/null)"
 expect "user is a member of $GROUP" \
   "$(az ad group member check --group "$GROUP_ID" --member-id "$USER_ID" --query value -o tsv 2>/dev/null)" "true"
