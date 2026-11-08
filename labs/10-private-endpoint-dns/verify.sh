@@ -20,7 +20,9 @@ expect "private DNS zone has an A record for the account" \
 say "Name resolution from INSIDE the VNet should return a 10.60.2.x address"
 IN="$(az vm run-command invoke -g "$RG" -n vm-test01 --command-id RunShellScript \
   --scripts "getent hosts $HOST | awk '{print \$1}'" --query "value[0].message" -o tsv)"
-if [[ "$IN" == *"10.60.2."* ]]; then pass "inside the VNet, $HOST resolves to a private IP"; else fail "expected 10.60.2.x, got: $IN"; fi
+IP_IN="$(grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' <<< "$IN" | head -1)"
+if [[ "$IP_IN" == 10.60.2.* ]]; then pass "inside the VNet, $HOST resolves to a private IP ($IP_IN)"
+else fail "expected 10.60.2.x, got: ${IP_IN:-no answer}"; fi
 
 say "From OUTSIDE (your shell), the public path is refused"
 # Must be the NETWORK rule refusing it (403 AuthorizationFailure). A 409 only means anonymous blob

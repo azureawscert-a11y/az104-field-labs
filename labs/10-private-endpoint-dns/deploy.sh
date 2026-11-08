@@ -33,14 +33,18 @@ az network private-endpoint create --resource-group "$RG" --name "pe-${SA}-blob"
 
 say "4. Private DNS zone, linked to the VNet, with an automatic A record"
 # These three "create" commands fail if the item already exists, so each runs only once.
-if ! az network private-dns zone show -g "$RG" -n "$ZONE" -o none 2>/dev/null; then
+# Test for a real ID, not just the exit code.
+exists() { [[ -n "$("$@" --query id -o tsv 2>/dev/null)" ]]; }
+if ! exists az network private-dns zone show -g "$RG" -n "$ZONE"; then
   az network private-dns zone create --resource-group "$RG" --name "$ZONE" -o none
 fi
-if ! az network private-dns link vnet show -g "$RG" --zone-name "$ZONE" -n link-lab10 -o none 2>/dev/null; then
+if ! exists az network private-dns link vnet show -g "$RG" --zone-name "$ZONE" -n link-lab10; then
   az network private-dns link vnet create --resource-group "$RG" --zone-name "$ZONE" \
     --name link-lab10 --virtual-network "$VNET" --registration-enabled false -o none
 fi
-if ! az network private-endpoint dns-zone-group show -g "$RG" --endpoint-name "pe-${SA}-blob" -n default -o none 2>/dev/null; then
+# "dns-zone-group show" exits 0 with no output when the group is missing, so count it with "list".
+ZG="$(az network private-endpoint dns-zone-group list -g "$RG" --endpoint-name "pe-${SA}-blob" --query "[?name=='default'] | length(@)" -o tsv)"
+if [[ "$ZG" != "1" ]]; then
   az network private-endpoint dns-zone-group create --resource-group "$RG" \
     --endpoint-name "pe-${SA}-blob" --name default --private-dns-zone "$ZONE" --zone-name blob -o none
 fi
