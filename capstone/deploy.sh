@@ -37,10 +37,18 @@ az policy assignment create --name cap-allowed-locations --display-name "Approve
 if ! az lock show --name lock-capstone --resource-group "$RG" -o none 2>/dev/null; then
   echo "  waiting until the tag policy is active (usually 2 to 10 minutes)"
   TAG=""
-  for _ in $(seq 1 40); do
-    az network nsg create -g "$RG" -n nsg-policy-probe -l "$LOC" -o none 2>/dev/null || true
-    TAG="$(az network nsg show -g "$RG" -n nsg-policy-probe --query tags.CostCenter -o tsv 2>/dev/null || true)"
-    az network nsg delete -g "$RG" -n nsg-policy-probe -o none 2>/dev/null || true
+  RUN_ID="$(date +%s)"
+  for i in $(seq 1 40); do
+    # A new name every time, so an old probe can never answer for this one.
+    PROBE="nsg-policy-probe-$RUN_ID-$i"
+    if ! az network nsg create -g "$RG" -n "$PROBE" -l "$LOC" -o none; then
+      echo "ERROR: could not create the test NSG $PROBE (see the error above)." >&2; exit 1
+    fi
+    TAG="$(az network nsg show -g "$RG" -n "$PROBE" --query tags.CostCenter -o tsv)" || TAG="read-failed"
+    if ! az network nsg delete -g "$RG" -n "$PROBE" -o none; then
+      echo "ERROR: could not delete the test NSG $PROBE. Delete it, then run ./deploy.sh again." >&2; exit 1
+    fi
+    [[ "$TAG" == "read-failed" ]] && { echo "ERROR: could not read the tags of $PROBE (see the error above)." >&2; exit 1; }
     [[ "$TAG" == "IT-100" ]] && break
     sleep 15
   done
