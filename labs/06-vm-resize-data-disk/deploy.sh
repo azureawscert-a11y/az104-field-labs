@@ -42,20 +42,35 @@ if [[ "$(az vm show --resource-group "$RG" --name "$VM" --query 'length(storageP
 fi
 
 say "5. Partition, format and mount the disk inside Linux (run-command, no SSH)"
+# A run that stopped halfway can leave the VM deallocated, and run-command needs it running.
+POWER="$(az vm get-instance-view -g "$RG" -n "$VM" \
+  --query "instanceView.statuses[?starts_with(code,'PowerState/')].code | [0]" -o tsv)"
+if [[ "$POWER" != "PowerState/running" ]]; then
+  echo "  VM is $POWER: starting it"
+  az vm start -g "$RG" -n "$VM" -o none
+fi
+# Safe to re-run: it only partitions a disk with no partition, only formats a partition with no
+# filesystem, and never touches a disk that already holds data.
 # shellcheck disable=SC2016  # the script runs inside the VM, so $ must not expand here
 az vm run-command invoke --resource-group "$RG" --name "$VM" --command-id RunShellScript --scripts '
+set -e
 # Find the data disk at LUN 0. SCSI sizes (B, Dv4...) use /dev/disk/azure/scsi1/lun0;
 # newer NVMe sizes (v6) use /dev/disk/azure/data/by-lun/0 or /dev/nvme0n2.
+DISK=""
 for p in /dev/disk/azure/data/by-lun/0 /dev/disk/azure/scsi1/lun0 /dev/nvme0n2; do
   [ -e "$p" ] && DISK=$(readlink -f "$p") && break
 done
+[ -n "$DISK" ] || { echo "ERROR: no data disk found at LUN 0"; exit 1; }
 PART="${DISK}1"; case "$DISK" in *nvme*) PART="${DISK}p1";; esac
-if ! lsblk -no MOUNTPOINT "$PART" 2>/dev/null | grep -q /data; then
+if [ ! -e "$PART" ]; then
   parted "$DISK" --script mklabel gpt mkpart primary ext4 0% 100%
-  partprobe "$DISK"; udevadm settle; mkfs.ext4 -q "$PART"; mkdir -p /data
-  echo "UUID=$(blkid -s UUID -o value $PART) /data ext4 defaults,nofail 0 2" >> /etc/fstab
-  mount -a
+  partprobe "$DISK"; udevadm settle
 fi
+blkid "$PART" >/dev/null 2>&1 || mkfs.ext4 -q "$PART"
+UUID=$(blkid -s UUID -o value "$PART")
+mkdir -p /data
+grep -q "$UUID" /etc/fstab || echo "UUID=$UUID /data ext4 defaults,nofail 0 2" >> /etc/fstab
+mountpoint -q /data || mount /data
 df -h /data' --query "value[0].message" -o tsv
 
 echo "Done. Next: ./verify.sh"

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
 set -uo pipefail
-az group delete --name rg-az104-lab06 --yes --no-wait
-echo "Cleanup started for rg-az104-lab06. Data disks are separate resources: deleting the group removes them too."
+# shellcheck source=SCRIPTDIR/../../common/lib.sh
+source "$(dirname "$0")/../../common/lib.sh"
+delete_group rg-az104-lab06 || exit 1
+echo "  Data disks are separate resources: deleting the group removes them too."
