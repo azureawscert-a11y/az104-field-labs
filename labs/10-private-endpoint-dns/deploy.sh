@@ -32,11 +32,18 @@ az network private-endpoint create --resource-group "$RG" --name "pe-${SA}-blob"
   --group-id blob --connection-name "conn-${SA}-blob" -o none
 
 say "4. Private DNS zone, linked to the VNet, with an automatic A record"
-az network private-dns zone create --resource-group "$RG" --name "$ZONE" -o none
-az network private-dns link vnet create --resource-group "$RG" --zone-name "$ZONE" \
-  --name link-lab10 --virtual-network "$VNET" --registration-enabled false -o none
-az network private-endpoint dns-zone-group create --resource-group "$RG" \
-  --endpoint-name "pe-${SA}-blob" --name default --private-dns-zone "$ZONE" --zone-name blob -o none
+# These three "create" commands fail if the item already exists, so each runs only once.
+if ! az network private-dns zone show -g "$RG" -n "$ZONE" -o none 2>/dev/null; then
+  az network private-dns zone create --resource-group "$RG" --name "$ZONE" -o none
+fi
+if ! az network private-dns link vnet show -g "$RG" --zone-name "$ZONE" -n link-lab10 -o none 2>/dev/null; then
+  az network private-dns link vnet create --resource-group "$RG" --zone-name "$ZONE" \
+    --name link-lab10 --virtual-network "$VNET" --registration-enabled false -o none
+fi
+if ! az network private-endpoint dns-zone-group show -g "$RG" --endpoint-name "pe-${SA}-blob" -n default -o none 2>/dev/null; then
+  az network private-endpoint dns-zone-group create --resource-group "$RG" \
+    --endpoint-name "pe-${SA}-blob" --name default --private-dns-zone "$ZONE" --zone-name blob -o none
+fi
 
 say "5. A test VM inside the VNet (no public IP)"
 if ! az vm show -g "$RG" -n vm-test01 -o none 2>/dev/null; then
