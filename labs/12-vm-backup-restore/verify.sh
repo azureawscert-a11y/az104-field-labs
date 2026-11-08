@@ -8,12 +8,11 @@ VAULT="rsv-lab12"
 VM="vm-files01"
 require_login
 say "Checking lab 12"
-expect "VM is protected by the vault" \
-  "$(az backup item list -g "$RG" --vault-name "$VAULT" --query "[?properties.friendlyName=='$VM'] | length(@)" -o tsv)" "1"
+expect "VM is actively protected by the vault" "$(backup_state "$RG" "$VAULT" "$VM")" "Protected"
 expect "custom policy keeps daily points 14 days" \
   "$(az backup policy show -g "$RG" --vault-name "$VAULT" -n pol-daily-14d --query "properties.retentionPolicy.dailySchedule.retentionDuration.count" -o tsv)" "14"
 expect "protection policy is pol-daily-14d" \
-  "$(az backup item list -g "$RG" --vault-name "$VAULT" --query "[0].properties.policyName" -o tsv)" "pol-daily-14d"
+  "$(az backup item list -g "$RG" --vault-name "$VAULT" --query "[?properties.friendlyName=='$VM'] | [0].properties.policyName" -o tsv)" "pol-daily-14d"
 STATUS="$(az backup job list -g "$RG" --vault-name "$VAULT" --query "[?properties.operation=='Backup'] | [0].properties.status" -o tsv)"
 if [[ "$STATUS" == "Completed" ]]; then pass "latest backup job Completed"; else fail "latest backup job is '$STATUS' (wait and run again)"; fi
 RPS="$(az backup recoverypoint list -g "$RG" --vault-name "$VAULT" --container-name "$VM" --item-name "$VM" \
