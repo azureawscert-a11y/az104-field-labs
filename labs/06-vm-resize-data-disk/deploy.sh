@@ -66,8 +66,11 @@ if [ ! -e "$PART" ]; then
   parted "$DISK" --script mklabel gpt mkpart primary ext4 0% 100%
   partprobe "$DISK"; udevadm settle
 fi
-blkid "$PART" >/dev/null 2>&1 || mkfs.ext4 -q "$PART"
+# A new GPT partition already has a PARTUUID, so test for a FILESYSTEM type, not just "blkid works".
+FSTYPE=$(blkid -s TYPE -o value "$PART" || true)
+[ -n "$FSTYPE" ] || mkfs.ext4 -q "$PART"
 UUID=$(blkid -s UUID -o value "$PART")
+[ -n "$UUID" ] || { echo "ERROR: no filesystem UUID on $PART"; exit 1; }
 mkdir -p /data
 grep -q "$UUID" /etc/fstab || echo "UUID=$UUID /data ext4 defaults,nofail 0 2" >> /etc/fstab
 mountpoint -q /data || mount /data
