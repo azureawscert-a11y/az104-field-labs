@@ -100,6 +100,57 @@ assign_role() {
   fi
 }
 
+# group_id_exact NAME -> prints the object ID of the ONE Entra group with exactly this display name
+# (empty if there is none). "az ad group list --display-name" and "show --group" match name PREFIXES,
+# so they could pick up an unrelated group like "grp-x-old". Stops if several groups share the name.
+group_id_exact() {
+  local ids n
+  ids="$(az ad group list --filter "displayName eq '$1'" --query "[].id" -o tsv)" || return 1
+  n="$(grep -c . <<< "$ids" || true)"
+  if [[ "$n" -gt 1 ]]; then
+    echo "ERROR: $n Entra groups are named '$1'. Delete or rename the extras, then run again." >&2
+    return 1
+  fi
+  echo "$ids"
+}
+
+# delete_group RG -> starts deleting a resource group. Already gone is fine; any other error returns 1.
+delete_group() {
+  local out
+  if [[ "$(az group exists -n "$1")" != "true" ]]; then echo "  $1 is already gone"; return 0; fi
+  if out="$(az group delete --name "$1" --yes --no-wait 2>&1)"; then echo "Cleanup started for $1."; return 0; fi
+  echo "$out" >&2
+  echo "Could not delete $1. Read the error above, fix it, and run ./cleanup.sh again." >&2
+  return 1
+}
+
+# delete_vm_restore_points VM -> deletes the VM's instant-restore snapshots (restore point collections).
+# Azure Backup keeps them in AzureBackupRG_<region>_1. Unlike soft-deleted vault data they are BILLED,
+# and they are not removed when protection stops, so the labs remove them explicitly.
+delete_vm_restore_points() {
+  local ids
+  ids="$(az resource list --resource-type Microsoft.Compute/restorePointCollections \
+        --query "[?starts_with(name, 'AzureBackup_$1_')].id" -o tsv)" || return 1
+  [[ -z "$ids" ]] && return 0
+  echo "  deleting instant-restore snapshots of $1 (they are billed, even while the backup is soft-deleted)"
+  # shellcheck disable=SC2086  # word splitting on IDs is intended
+  az resource delete --ids $ids -o none
+}
+
+# pe_ip RG PRIVATE_ENDPOINT -> prints the private endpoint's own IP (from its network interface)
+pe_ip() {
+  local nic
+  nic="$(az network private-endpoint show -g "$1" -n "$2" --query "networkInterfaces[0].id" -o tsv)" || return 1
+  az network nic show --ids "$nic" --query "ipConfigurations[0].privateIPAddress" -o tsv
+}
+
+# backup_state RG VAULT VM -> prints the protection state of the VM's ACTIVE backup item
+# (Protected, IRPending = first backup not done yet, ProtectionStopped...), ignoring soft-deleted items.
+backup_state() {
+  az backup item list -g "$1" --vault-name "$2" --backup-management-type AzureIaasVM \
+    --query "[?properties.friendlyName=='$3' && properties.isScheduledForDeferredDelete!=\`true\`] | [0].properties.protectionState" -o tsv
+}
+
 # backup_enable_once RG VAULT VM [POLICY]  -> enables VM backup only if the VM is not already protected (safe to re-run)
 backup_enable_once() {
   local rg="$1" vault="$2" vm="$3" policy="${4:-DefaultPolicy}" active deleted
@@ -121,9 +172,10 @@ backup_enable_once() {
 
 # backup_cleanup RG VAULT VM
 # Waits for running jobs, stops protection and deletes the backup data, then tries to delete the vault.
-# Since 2026 vaults are "secure by default": soft delete is always on, so deleted backup data is kept
-# for 14 days (no charge in that window) and nobody can purge it early. "vault delete --force" still
-# works: Azure moves the vault and its soft-deleted backup into a 14-day soft-deleted state (tested Nov 2026).
+# Since 2026 vaults are "secure by default": soft delete is always on, so deleted vault backup data is
+# kept for 14 days at no charge. The VM's instant-restore SNAPSHOTS are different: they are billed and
+# must be deleted separately (delete_vm_restore_points). "vault delete --force" still works: Azure moves
+# the vault and its soft-deleted backup into a 14-day soft-deleted state (tested Nov 2026).
 # Returns 0 = vault gone, 2 = Azure refused and kept the vault (fallback path), 1 = something is wrong.
 backup_cleanup() {
   local rg="$1" vault="$2" vm="$3" job active
@@ -141,6 +193,7 @@ backup_cleanup() {
     az backup protection disable -g "$rg" --vault-name "$vault" --container-name "$vm" --item-name "$vm" \
       --backup-management-type AzureIaasVM --delete-backup-data true --yes -o none || return 1
   fi
+  delete_vm_restore_points "$vm" || return 1
   if az backup vault delete -g "$rg" --name "$vault" --yes --force -o none 2>/dev/null; then
     echo "  vault $vault deleted"; return 0
   fi
@@ -153,7 +206,7 @@ backup_cleanup() {
 delete_all_but_vault() {
   local rg="$1" ids vms i
   for i in 1 2 3 4 5; do
-    ids="$(az resource list -g "$rg" --query "[?type!='Microsoft.RecoveryServices/vaults'].id" -o tsv)"
+    ids="$(az resource list -g "$rg" --query "[?type!='Microsoft.RecoveryServices/vaults'].id" -o tsv)" || return 1
     [[ -z "$ids" ]] && { echo "  everything except the vault is deleted"; return 0; }
     vms="$(grep -i '/virtualMachines/' <<< "$ids" || true)"
     # shellcheck disable=SC2086  # word splitting on IDs is intended
@@ -172,6 +225,6 @@ finish_vault_cleanup() {
   when="$(date -u -d '+15 days' '+%B %d' 2>/dev/null || date -u -v+15d '+%B %d')"
   echo
   echo "Azure keeps vault $2 for 14 days because its backups are soft-deleted (secure by default)."
-  echo "That costs nothing. Everything else in $1 is deleted."
+  echo "The soft-deleted backup data costs nothing. Everything else in $1 is deleted."
   echo "Run ./cleanup.sh again on or after $when to delete the vault and the resource group."
 }
