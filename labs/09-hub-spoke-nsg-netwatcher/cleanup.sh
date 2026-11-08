@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
 set -uo pipefail
-az group delete --name rg-az104-lab09 --yes --no-wait
-echo "Cleanup started for rg-az104-lab09. NetworkWatcherRG is shared by your subscription: leave it."
+# shellcheck source=SCRIPTDIR/../../common/lib.sh
+source "$(dirname "$0")/../../common/lib.sh"
+delete_group rg-az104-lab09 || exit 1
+echo "  NetworkWatcherRG is shared by your subscription: leave it."
