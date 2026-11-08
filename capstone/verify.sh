@@ -17,9 +17,22 @@ expect "delete lock on the RG" "$(az lock list -g "$RG" --query "length(@)" -o t
 OSDISK="$(az vm show -g "$RG" -n vm-app01 --query storageProfile.osDisk.name -o tsv)"
 expect "OS disk inherited CostCenter=IT-100 from the RG (Modify policy)" \
   "$(az disk show -g "$RG" -n "$OSDISK" --query tags.CostCenter -o tsv)" "IT-100"
-OTHER="westeurope"; [[ "$LOC" == "westeurope" ]] && OTHER="eastus"
-expect_denied "a resource outside the approved region ($OTHER) is denied by policy" RequestDisallowedByPolicy \
-  az network nsg create -g "$RG" -n nsg-should-fail --location "$OTHER" --tags CostCenter=IT-100
+# Try a region outside the approved list. Some regions refuse new customers on their own
+# ("RequestDisallowedByAzure"), which proves nothing about our policy, so skip those and try the next.
+DENY_DONE=""
+for OTHER in eastus2 canadacentral westus2 centralus northeurope uksouth australiaeast eastus; do
+  [[ "$OTHER" == "$LOC" ]] && continue
+  if OUT="$(az network nsg create -g "$RG" -n nsg-should-fail --location "$OTHER" --tags CostCenter=IT-100 -o none 2>&1)"; then
+    fail "a resource outside the approved region ($OTHER) is denied by policy (it was allowed)"; DENY_DONE=1; break
+  elif grep -q RequestDisallowedByPolicy <<< "$OUT"; then
+    pass "a resource outside the approved region ($OTHER) is denied by policy"; DENY_DONE=1; break
+  elif grep -q RequestDisallowedByAzure <<< "$OUT"; then
+    continue
+  else
+    fail "region policy test failed for another reason: $(grep -m1 -E 'ERROR|Message' <<< "$OUT" | cut -c1-150)"; DENY_DONE=1; break
+  fi
+done
+[[ -n "$DENY_DONE" ]] || fail "could not test the region policy: every test region refused new customers"
 
 say "Network"
 expect "hub-spoke peering Connected" \
