@@ -7,8 +7,13 @@ RG="rg-az104-lab08"
 require_login
 ACR="acrlab08$(suffix)"
 say "Checking lab 08"
-expect "image hello is in your registry" \
-  "$(az acr repository list --name "$ACR" --query "[?@=='hello'] | length(@)" -o tsv)" "1"
+SERVER="$(az acr show --name "$ACR" --query loginServer -o tsv)"
+expect "image hello:v1 is in your registry" \
+  "$(az acr repository show-tags --name "$ACR" --repository hello --query "[?@=='v1'] | length(@)" -o tsv 2>/dev/null)" "1"
+expect "ACI runs the image from YOUR registry" \
+  "$(az container show -g "$RG" -n aci-hello --query "containers[0].image" -o tsv)" "$SERVER/hello:v1"
+expect "Container App runs the image from YOUR registry" \
+  "$(az containerapp show -g "$RG" -n ca-hello --query "properties.template.containers[0].image" -o tsv)" "$SERVER/hello:v1"
 expect "ACI container group is Running" \
   "$(az container show -g "$RG" -n aci-hello --query instanceView.state -o tsv)" "Running"
 ACI="$(az container show -g "$RG" -n aci-hello --query ipAddress.fqdn -o tsv)"
