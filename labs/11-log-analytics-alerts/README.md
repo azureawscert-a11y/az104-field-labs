@@ -9,7 +9,7 @@
 - **Diagnostic setting** on the storage account's blob service: StorageRead, StorageWrite, StorageDelete logs plus Transaction metrics.
 - **Action group** that emails you.
 - **Metric alert** on Transactions > 50 in 5 minutes.
-- **Alert processing rule** that removes notifications on weekends (Eastern time). If you run the lab on a Saturday or Sunday, no email arrives: the alert still fires, and you can see it in **Monitor > Alerts**.
+- **Alert processing rule** that removes notifications on weekends (Eastern time). If you run the lab on a Saturday or Sunday, no email arrives (a brand-new rule can take a few minutes to apply, so one email may slip through): the alert still fires, and you can see it in **Monitor > Alerts**.
 - Five **KQL** queries in `queries.kql`.
 
 ## Steps

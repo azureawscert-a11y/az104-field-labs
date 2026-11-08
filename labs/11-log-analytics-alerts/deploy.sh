@@ -58,5 +58,6 @@ for i in $(seq 1 80); do
     --account-name "$SA" --account-key "$KEY" --overwrite -o none
 done
 echo "80 uploads done, enough to cross the alert threshold of 50."
-echo "Note: on a Saturday or Sunday the processing rule silences the email. The alert still fires; see it in Monitor > Alerts."
+echo "Note: on a Saturday or Sunday the processing rule silences the email (a brand-new rule can take a few minutes"
+echo "to apply, so one email may still arrive). The alert still fires; see it in Monitor > Alerts."
 echo "Wait 10 to 15 minutes for logs, then run the queries in queries.kql and ./verify.sh"

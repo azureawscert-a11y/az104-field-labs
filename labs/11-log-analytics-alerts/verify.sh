@@ -14,7 +14,9 @@ expect "action group has one email receiver" \
   "$(az monitor action-group show -g "$RG" -n ag-cloud-ops --query 'length(emailReceivers)' -o tsv)" "1"
 expect "metric alert is enabled" \
   "$(az monitor metrics alert show -g "$RG" -n alert-storage-busy --query enabled -o tsv)" "true"
-check "alert processing rule exists" az monitor alert-processing-rule show -g "$RG" -n apr-quiet-weekends
+APR="$(az monitor alert-processing-rule show -g "$RG" -n apr-quiet-weekends \
+  --query "[properties.enabled, properties.actions[0].actionType, join(',', properties.schedule.recurrences[0].daysOfWeek)]" -o tsv | tr '\t\n' '  ' | xargs)"
+expect "weekend rule is enabled and removes notifications on Saturday and Sunday" "$APR" "True RemoveAllActionGroups Saturday,Sunday"
 
 CUST="$(az monitor log-analytics workspace show -g "$RG" --workspace-name law-lab11 --query customerId -o tsv)"
 ROWS="$(az monitor log-analytics query --workspace "$CUST" \
