@@ -14,7 +14,8 @@
 1. `./deploy.sh` (creates an SSH key in `~/.ssh` if you don't have one)
 2. `./verify.sh` confirms the deployment, the VM state, no public IP, and runs a command inside the VM with **run-command** (no SSH needed).
 3. **Modify the file yourself:** open `main.bicep`, add a second NSG rule `allow-https-from-vnet` (priority 210, port 443) under `securityRules`, run `az bicep build --file main.bicep` to check it, then
-   `az deployment group what-if -g rg-az104-lab05 --template-file main.bicep --parameters adminPublicKey="$(cat ~/.ssh/id_rsa.pub)" addDataDisk=true`
+   `source ~/.az104labs` (loads your region and VM size from `tools/check-region.sh`; skip if you never ran it), then
+   `az deployment group what-if -g rg-az104-lab05 --template-file main.bicep --parameters adminPublicKey="$(cat ~/.ssh/id_rsa.pub)" vmSize="${VM_SIZE:-Standard_B2ats_v2}" addDataDisk=true`
    and confirm what-if shows a `~ Modify` on `nsg-web` only. Deploy it with `az deployment group create` (same parameters).
 4. Extra practice:
    - `az bicep decompile --file main.json` after `az bicep build --file main.bicep` to see ARM JSON and back.
