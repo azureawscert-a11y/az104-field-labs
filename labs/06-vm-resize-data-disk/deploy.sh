@@ -63,15 +63,17 @@ done
 [ -n "$DISK" ] || { echo "ERROR: no data disk found at LUN 0"; exit 1; }
 PART="${DISK}1"; case "$DISK" in *nvme*) PART="${DISK}p1";; esac
 if [ ! -e "$PART" ]; then
-  # No partition 1. Only partition a disk that is provably blank, or stop and touch nothing:
-  # 1) "blkid -p" exits 2 when it finds no filesystem or partition table. It also exits 2 when it
-  #    cannot open the disk, so 2) read the first MiB ourselves: a new Azure disk is all zeros, and
-  #    every partition table or filesystem writes something there. A failed read stops the script.
+  # No partition 1. Only partition a disk that is provably blank, or stop and touch nothing.
+  # "blkid -p" exits 2 when it finds nothing, but also when it cannot read the disk, so it is not
+  # proof. The proof: compare the WHOLE disk with zeros. A new Azure disk reads as all zeros. Data
+  # anywhere (metadata can sit at the end), a short read or a read error stops the script.
   rc=0; blkid -p "$DISK" >/dev/null || rc=$?
   [ "$rc" -eq 2 ] || { echo "ERROR: $DISK has no partition 1 but is not blank (blkid exit $rc). Not touching it."; exit 1; }
-  rm -f /tmp/lab06-head.bin; dd if="$DISK" of=/tmp/lab06-head.bin bs=1M count=1 status=none
-  [ "$(wc -c < /tmp/lab06-head.bin)" -eq 1048576 ] || { echo "ERROR: could not read the start of $DISK. Not touching it."; exit 1; }
-  [ "$(tr -d "\\000" < /tmp/lab06-head.bin | wc -c)" -eq 0 ] || { echo "ERROR: $DISK is not blank (data in its first MiB). Not touching it."; exit 1; }
+  SIZE=$(blockdev --getsize64 "$DISK")
+  [ "$SIZE" -gt 0 ] || { echo "ERROR: could not read the size of $DISK. Not touching it."; exit 1; }
+  echo "Checking that all $SIZE bytes of $DISK are zero (about 2 minutes for 8 GiB)"
+  rc=0; cmp -s -n "$SIZE" "$DISK" /dev/zero || rc=$?
+  [ "$rc" -eq 0 ] || { echo "ERROR: $DISK is not blank, or could not be read in full (cmp exit $rc). Not touching it."; exit 1; }
   parted "$DISK" --script mklabel gpt mkpart primary ext4 0% 100%
   partprobe "$DISK"; udevadm settle
 fi
