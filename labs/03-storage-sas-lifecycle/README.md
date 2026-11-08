@@ -17,7 +17,7 @@
 3. `./revoke.sh` deletes the stored access policy and shows the same link now returns 403. Run `./deploy.sh` again if you want the link back.
 
 ## Explain it (interview)
-"An ad hoc SAS can only be revoked by rotating the key that signed it, which breaks every other app using that key. A SAS tied to a stored access policy can be revoked by deleting or changing the policy. A user delegation SAS (signed with Entra ID credentials) is the most secure option for blobs."
+"An ad hoc service SAS signed with an account key can only be revoked by rotating that key, which breaks every other app using it. A SAS tied to a stored access policy can be revoked by deleting or changing the policy. A user delegation SAS (signed with Entra ID credentials) is the most secure option for blobs."
 
 ## Cleanup
 `./cleanup.sh`
