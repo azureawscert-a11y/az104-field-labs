@@ -43,9 +43,15 @@ backup_enable_once "$RG" "$VAULT" "$VM" "$POLICY"
 
 say "5. Back up now (do not wait for tonight's schedule)"
 RETAIN="$(date -u -d '+7 days' '+%d-%m-%Y' 2>/dev/null || date -u -v+7d '+%d-%m-%Y')"
-az backup protection backup-now --resource-group "$RG" --vault-name "$VAULT" \
-  --container-name "$VM" --item-name "$VM" --backup-management-type AzureIaasVM \
-  --retain-until "$RETAIN" -o none
+# On a re-run, do not start a second backup while the first is still running (Azure refuses it).
+RUNNING="$(az backup job list -g "$RG" --vault-name "$VAULT" --status InProgress --operation Backup --query "[0].name" -o tsv)"
+if [[ -n "$RUNNING" ]]; then
+  echo "  a backup job is already running ($RUNNING), not starting another"
+else
+  az backup protection backup-now --resource-group "$RG" --vault-name "$VAULT" \
+    --container-name "$VM" --item-name "$VM" --backup-management-type AzureIaasVM \
+    --retain-until "$RETAIN" -o none
+fi
 
 echo
 echo "Backup job started. The first backup takes 20 to 60 minutes."
