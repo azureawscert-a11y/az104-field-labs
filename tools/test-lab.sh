@@ -15,6 +15,7 @@ mkdir -p "$LOGDIR"
 LOG="$LOGDIR/$NAME.log"
 : > "$LOG"
 RESULT=""
+STATUS=0   # becomes 1 if any step fails, so callers can trust the exit code
 cd "$DIR" || { echo "No such folder: $DIR"; exit 1; }
 for s in "${STEPS[@]}"; do
   start=$SECONDS
@@ -23,12 +24,14 @@ for s in "${STEPS[@]}"; do
   rc=${PIPESTATUS[0]}
   echo "### $s exit=$rc ($((SECONDS - start))s)" >> "$LOG"
   RESULT="$RESULT $s=$rc"
+  [[ $rc -ne 0 ]] && STATUS=1
   # stop before verify if deploy failed, but always allow cleanup
   if [[ $rc -ne 0 && "$s" == deploy.sh ]]; then
-    for c in "${STEPS[@]}"; do [[ "$c" == cleanup.sh ]] && { echo "### cleanup.sh (after failed deploy)" >> "$LOG"; bash ./cleanup.sh >> "$LOG" 2>&1; RESULT="$RESULT cleanup.sh=$?"; }; done
+    for c in "${STEPS[@]}"; do [[ "$c" == cleanup.sh ]] && { echo "### cleanup.sh (after failed deploy)" >> "$LOG"; bash ./cleanup.sh >> "$LOG" 2>&1; rc=$?; RESULT="$RESULT cleanup.sh=$rc"; [[ $rc -ne 0 ]] && STATUS=1; }; done
     break
   fi
 done
 LINE="$(date +%H:%M) $NAME:$RESULT"
 echo "$LINE" | tee -a "$LOGDIR/summary.txt"
 grep -E "FAIL|ERROR|Error|error:" "$LOG" | head -15 || true
+exit "$STATUS"
