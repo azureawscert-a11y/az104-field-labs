@@ -22,7 +22,7 @@ if az group show -n "$RG" -o none 2>/dev/null; then
     finish_vault_cleanup "$RG" rsv-nwclinic
   fi
 fi
-OPS_ID="$(group_id_exact grp-clinic-ops)" || exit 1
+OPS_ID="$(lab_group_id grp-clinic-ops)" || exit 1
 if [[ -n "$OPS_ID" ]]; then
   # If the resource group is still there (vault kept by soft delete), remove the group's role assignment
   # first, or it would be left behind as "Identity not found".

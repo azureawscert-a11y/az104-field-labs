@@ -32,11 +32,24 @@ az policy assignment create --name cap-allowed-locations --display-name "Approve
   --policy "$LOC_POLICY" --scope "$RG_ID" \
   --params "{\"listOfAllowedLocations\":{\"value\":[\"$LOC\",\"global\"]}}" -o none
 
-say "2. RBAC: an ops group gets Virtual Machine Contributor on the resource group"
-OPS_ID="$(group_id_exact grp-clinic-ops)"
-if [[ -z "$OPS_ID" ]]; then
-  OPS_ID="$(az ad group create --display-name grp-clinic-ops --mail-nickname grp-clinic-ops --query id -o tsv)"
+# A new policy assignment takes about 5 minutes to apply. Prove the tag policy works on a throwaway,
+# untagged NSG before building anything, or the VM's OS disk could miss its CostCenter tag.
+if ! az lock show --name lock-capstone --resource-group "$RG" -o none 2>/dev/null; then
+  echo "  waiting until the tag policy is active (usually 2 to 10 minutes)"
+  TAG=""
+  for _ in $(seq 1 40); do
+    az network nsg create -g "$RG" -n nsg-policy-probe -l "$LOC" -o none 2>/dev/null || true
+    TAG="$(az network nsg show -g "$RG" -n nsg-policy-probe --query tags.CostCenter -o tsv 2>/dev/null || true)"
+    az network nsg delete -g "$RG" -n nsg-policy-probe -o none 2>/dev/null || true
+    [[ "$TAG" == "IT-100" ]] && break
+    sleep 15
+  done
+  [[ "$TAG" == "IT-100" ]] || { echo "ERROR: the tag policy is still not active. Wait a few minutes and run ./deploy.sh again." >&2; exit 1; }
+  echo "  tag policy is active"
 fi
+
+say "2. RBAC: an ops group gets Virtual Machine Contributor on the resource group"
+OPS_ID="$(lab_group_ensure grp-clinic-ops)"
 assign_role "$OPS_ID" Group "Virtual Machine Contributor" "$RG_ID"
 
 say "3. Infrastructure from Bicep (preview, then deploy)"
