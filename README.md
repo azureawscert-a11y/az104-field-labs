@@ -62,7 +62,7 @@ EMAIL=you@example.com bash tools/setup-subscription.sh   # providers + US$20 bud
 bash tools/check-region.sh                               # finds a region and VM size YOUR subscription can use
 ```
 
-New subscriptions are often blocked from small VM sizes in busy regions (`SkuNotAvailable`) or start with 0 quota for some VM families (`QuotaExceeded`), and some have no App Service Standard quota in a region. In our own test on a brand-new Pay-As-You-Go subscription, Canada Central allowed none of the lab VM sizes, while East US and West US 2 allowed `Standard_D2als_v6`, and only West US 2 allowed an S1 App Service plan.
+New subscriptions are often blocked from small VM sizes in busy regions (`SkuNotAvailable`) or start with 0 quota for some VM families (`QuotaExceeded`), and some have no App Service Standard quota in a region. In our own test on a brand-new Pay-As-You-Go subscription, Canada Central allowed none of the lab VM sizes, while Canada East, East US and West US 2 allowed `Standard_D2als_v6`. An S1 App Service plan worked in Canada East and West US 2 but not in Canada Central or East US. `check-region.sh` picked Canada East, and all labs passed there.
 
 `check-region.sh` uses `az vm create --validate` (Azure's preflight check, creates nothing) to try the sizes cheapest first: `Standard_B2ats_v2`, `B2s`, `D2als_v6`, `D2as_v5`, `D2as_v4`. It saves the first region that works to `~/.az104labs`, and every lab reads it. Override any value for one run: `LOC=eastus2 ./deploy.sh`.
 
