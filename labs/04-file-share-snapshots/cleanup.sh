@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -uo pipefail
+# shellcheck source=SCRIPTDIR/../../common/lib.sh
+source "$(dirname "$0")/../../common/lib.sh"
 rm -rf "$(dirname "$0")/restored" "$(dirname "$0")/snapshot.txt" /tmp/travel-policy.txt
-az group delete --name rg-az104-lab04 --yes --no-wait
-echo "Cleanup started for rg-az104-lab04."
+delete_group rg-az104-lab04 || exit 1
