@@ -30,10 +30,7 @@ else
 fi
 
 say "3. Create the security group and add the user"
-GROUP_ID="$(group_id_exact "$GROUP")"
-if [[ -z "$GROUP_ID" ]]; then
-  GROUP_ID="$(az ad group create --display-name "$GROUP" --mail-nickname "$GROUP" --query id -o tsv)"
-fi
+GROUP_ID="$(lab_group_ensure "$GROUP")"
 if [[ "$(az ad group member check --group "$GROUP_ID" --member-id "$USER_ID" --query value -o tsv)" != "true" ]]; then
   az ad group member add --group "$GROUP_ID" --member-id "$USER_ID"
 fi
