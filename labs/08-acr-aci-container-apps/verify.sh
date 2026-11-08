@@ -19,4 +19,6 @@ expect "Container App min replicas = 1" \
   "$(az containerapp show -g "$RG" -n ca-hello --query properties.template.scale.minReplicas -o tsv)" "1"
 expect "Container App max replicas = 5" \
   "$(az containerapp show -g "$RG" -n ca-hello --query properties.template.scale.maxReplicas -o tsv)" "5"
+expect "HTTP scale rule at 20 concurrent requests" \
+  "$(az containerapp show -g "$RG" -n ca-hello --query "properties.template.scale.rules[?name=='http-rule'].http.metadata.concurrentRequests | [0]" -o tsv)" "20"
 summary

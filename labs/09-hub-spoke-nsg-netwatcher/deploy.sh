@@ -9,10 +9,15 @@ require_login
 
 say "1. Two VNets with NON-overlapping address spaces (peering requires this)"
 az group create --name "$RG" --location "$LOC" --tags lab=09 -o none
-az network vnet create --resource-group "$RG" --name vnet-hub --address-prefixes 10.10.0.0/16 \
-  --subnet-name snet-shared --subnet-prefixes 10.10.1.0/24 -o none
-az network vnet create --resource-group "$RG" --name vnet-spoke1 --address-prefixes 10.20.0.0/16 \
-  --subnet-name snet-app --subnet-prefixes 10.20.1.0/24 -o none
+# Create each VNet only once: "vnet create" on an existing VNet resends its subnets and drops the NSG link.
+if ! az network vnet show -g "$RG" -n vnet-hub -o none 2>/dev/null; then
+  az network vnet create --resource-group "$RG" --name vnet-hub --address-prefixes 10.10.0.0/16 \
+    --subnet-name snet-shared --subnet-prefixes 10.10.1.0/24 -o none
+fi
+if ! az network vnet show -g "$RG" -n vnet-spoke1 -o none 2>/dev/null; then
+  az network vnet create --resource-group "$RG" --name vnet-spoke1 --address-prefixes 10.20.0.0/16 \
+    --subnet-name snet-app --subnet-prefixes 10.20.1.0/24 -o none
+fi
 
 say "2. Peering is two links, one from each side"
 az network vnet peering create --resource-group "$RG" --name hub-to-spoke1 \

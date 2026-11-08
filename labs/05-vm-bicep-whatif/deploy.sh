@@ -21,9 +21,16 @@ az deployment group what-if --resource-group "$RG" --template-file "$HERE/main.b
   --parameters adminPublicKey="$PUBKEY" vmSize="$VM_SIZE"
 
 say "3. Deploy for real"
-az deployment group create --name lab05-v1 --resource-group "$RG" \
-  --template-file "$HERE/main.bicep" --parameters adminPublicKey="$PUBKEY" vmSize="$VM_SIZE" \
-  --query "properties.outputs" -o json
+# On a re-run, v2 (with the data disk) already exists. Deploying v1 again would DETACH the disk:
+# incremental mode keeps resources that are missing from the template, but it resets the
+# properties of the ones that are in it (here: the VM's data disk list).
+if [[ "$(az deployment group show -g "$RG" -n lab05-v2 --query properties.provisioningState -o tsv 2>/dev/null)" == "Succeeded" ]]; then
+  echo "  v2 is already deployed, skipping v1"
+else
+  az deployment group create --name lab05-v1 --resource-group "$RG" \
+    --template-file "$HERE/main.bicep" --parameters adminPublicKey="$PUBKEY" vmSize="$VM_SIZE" \
+    --query "properties.outputs" -o json
+fi
 
 say "4. Change one thing (env tag) and preview again: what-if shows only the difference"
 az deployment group what-if --resource-group "$RG" --template-file "$HERE/main.bicep" \

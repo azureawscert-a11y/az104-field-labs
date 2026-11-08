@@ -22,6 +22,8 @@ for p in Microsoft.Network Microsoft.Compute Microsoft.Storage Microsoft.Web \
   az provider register --namespace "$p" -o none && echo "   $p"
 done
 
+# Budgets need Microsoft.Consumption registered first (a brand-new subscription may not have it yet).
+az provider register --namespace Microsoft.Consumption --wait -o none
 echo "2. Budget lab-budget (20 per month, alerts at 50/80/100% to $EMAIL)"
 S="$(date +%Y-%m-01)"
 E="$(date -d '+1 year' +%Y-%m-01)"
@@ -44,5 +46,5 @@ for _ in $(seq 1 30); do
 done
 
 echo "4. vCPU quota in $LOC (labs need about 2 to 4 vCPUs at a time)"
-az vm list-usage --location "$LOC" -o table | grep -iE "Total Regional vCPUs|BSv2" || true
+az vm list-usage --location "$LOC" -o table | grep -iE "Total Regional vCPUs|Basv2|BSv2|DALSv6|DASv6|DASv5" || true
 echo "Setup finished. Next: bash tools/check-region.sh  (finds a region and VM size your subscription can use)"

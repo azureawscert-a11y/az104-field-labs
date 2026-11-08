@@ -26,7 +26,8 @@ WITH="$(code "$LINK")"
 for _ in 1 2 3 4 5 6; do [[ "$WITH" == "200" ]] && break; sleep 5; WITH="$(code "$LINK")"; done
 expect "link WITH the SAS downloads the file" "$WITH" "200"
 NOSAS="$(code "$PLAIN")"
-if [[ "$NOSAS" != "200" ]]; then pass "link WITHOUT the SAS is refused ($NOSAS)"; else fail "link without SAS should not work"; fi
+# 409 = public access is off for the account, 403/404 = refused. 000 would mean curl itself failed.
+if [[ "$NOSAS" =~ ^(403|404|409)$ ]]; then pass "link WITHOUT the SAS is refused ($NOSAS)"; else fail "link WITHOUT the SAS: expected 403, 404 or 409, got $NOSAS"; fi
 expect "lifecycle rule exists" \
   "$(az storage account management-policy show --account-name "$SA" --resource-group "$RG" --query 'policy.rules[0].name' -o tsv)" \
   "reports-to-cool-then-delete"

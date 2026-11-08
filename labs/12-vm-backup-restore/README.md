@@ -1,6 +1,6 @@
 # Lab 12: Back up a VM and get a file back
 
-**Ticket INC-1012 · Priority 1 · 90 minutes (mostly waiting; the first backup took 56 minutes in our test) · about $0.10 per hour**
+**Ticket INC-1012 · Priority 1 · 90 minutes (mostly waiting; the first backup took 56 minutes in our test) · $0.02 to $0.15 per hour**
 
 > "Our billing server has no backup. Turn it on today. And show me you can actually restore something." (Finance director)
 

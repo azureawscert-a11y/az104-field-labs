@@ -24,6 +24,7 @@ say "3. Upload the team's policy document"
 echo "Travel policy v1: economy class for flights under 6 hours." > /tmp/travel-policy.txt
 az storage file upload --share-name "$SHARE" --source /tmp/travel-policy.txt \
   --path travel-policy.txt --account-name "$SA" --account-key "$KEY" -o none
+rm -f /tmp/travel-policy.txt   # so the only way back is the snapshot
 
 say "4. Take a snapshot BEFORE the risky change"
 SNAP="$(az storage share snapshot --name "$SHARE" --account-name "$SA" --account-key "$KEY" --query snapshot -o tsv)"

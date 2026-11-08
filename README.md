@@ -47,12 +47,12 @@ Then try it yourself: read `deploy.sh`, delete the lab, and rebuild it by typing
 | 04 | Team file share with snapshots and soft delete, restore a deleted file | Azure Files | < $0.05 |
 | 05 | Deploy a VM from Bicep, modify the template, preview with what-if | ARM/Bicep, VMs | $0.01 to $0.10 per hour (size) |
 | 06 | Resize a VM and add a data disk | VM sizes, disks | $0.02 to $0.15 per hour |
-| 07 | Zero-downtime release with an App Service deployment slot swap | App Service | ~ $0.10 per hour (S1) |
+| 07 | Zero-downtime release with an App Service deployment slot swap | App Service | about $0.10 per hour (S1) |
 | 08 | Run an image from Azure Container Registry on ACI and Container Apps | Containers | < $0.20 |
 | 09 | Hub-spoke peering, NSG, and prove traffic with Network Watcher | Networking | $0.02 to $0.20 per hour (2 VMs) |
 | 10 | Lock a storage account to a private endpoint with private DNS | Secure access | $0.03 to $0.12 per hour |
 | 11 | Send logs to Log Analytics, query with KQL, alert to email | Monitoring | < $0.05 |
-| 12 | Back up a VM with a custom policy and restore a file | Backup | ~ $0.10 per hour |
+| 12 | Back up a VM with a custom policy and restore its disks | Backup | $0.02 to $0.15 per hour |
 | Capstone | Mini landing zone for a small company | All domains | ~ $0.15 per hour |
 
 ## Before the first lab: two setup scripts

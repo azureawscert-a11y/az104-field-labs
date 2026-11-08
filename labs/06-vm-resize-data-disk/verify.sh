@@ -9,6 +9,8 @@ require_login
 say "Checking lab 06"
 expect "VM size is now $VM_SIZE_BIG" \
   "$(az vm show --resource-group "$RG" --name "$VM" --query hardwareProfile.vmSize -o tsv)" "$VM_SIZE_BIG"
+expect "VM provisioning succeeded (the resize really happened)" \
+  "$(az vm show --resource-group "$RG" --name "$VM" --query provisioningState -o tsv)" "Succeeded"
 expect "one data disk attached" \
   "$(az vm show --resource-group "$RG" --name "$VM" --query 'length(storageProfile.dataDisks)' -o tsv)" "1"
 expect "data disk is 8 GiB" \

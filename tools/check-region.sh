@@ -33,7 +33,12 @@ PAIRS=(
 az account show -o none 2>/dev/null || { echo "Not signed in. Run: az login"; exit 1; }
 echo "Subscription: $(az account show --query name -o tsv)"
 FIRST="$(echo "$REGIONS" | awk '{print $1}')"
-az group create --name "$CHECK_RG" --location "$FIRST" --tags purpose=region-check -o none
+# If a previous run's group is still being deleted, wait for it to go first.
+az group wait --deleted --name "$CHECK_RG" 2>/dev/null || true
+az group create --name "$CHECK_RG" --location "$FIRST" --tags purpose=region-check -o none \
+  || { echo "Could not create the test group $CHECK_RG. Read the error above."; exit 1; }
+# Always remove the test group, even if you press Ctrl+C (the App Service test creates a paid S1 plan for a few seconds).
+trap 'az group delete --name "$CHECK_RG" --yes --no-wait 2>/dev/null' EXIT
 
 vm_ok() {  # vm_ok REGION SIZE -> 0 if Azure would accept this VM
   local out
@@ -42,7 +47,9 @@ vm_ok() {  # vm_ok REGION SIZE -> 0 if Azure would accept this VM
         --validate 2>&1)"; then
     return 0
   fi
-  echo "      $2: $(echo "$out" | grep -oE 'SkuNotAvailable|QuotaExceeded|OperationNotAllowed' | head -1)"
+  local why
+  why="$(grep -oE 'SkuNotAvailable|QuotaExceeded|OperationNotAllowed' <<< "$out" | head -1)"
+  echo "      $2: ${why:-$(grep -m1 -E 'ERROR|Message' <<< "$out" | cut -c1-120)}"
   return 1
 }
 
@@ -75,7 +82,6 @@ for r in $REGIONS; do
   fi
   echo "   App Service S1: no quota here (lab 07 needs it)"
 done
-az group delete --name "$CHECK_RG" --yes --no-wait
 
 if [[ -z "$BEST_LOC" && -n "$VM_ONLY" ]]; then
   read -r BEST_LOC BEST_SMALL BEST_BIG <<< "$VM_ONLY"

@@ -10,7 +10,7 @@ VM="vm-files01"
 require_login
 SUB="$(az account show --query id -o tsv)"
 # Staging account name must be globally unique: derive it from your subscription ID
-SA="st12$(echo -n "$SUB" | md5sum | cut -c1-16)"
+SA="st12$(echo -n "$SUB" | tr -d '-' | cut -c1-16)"   # no md5sum: it doesn't exist on macOS
 
 say "1. Staging storage account in the same region (restore-disks needs one)"
 az storage account create -g "$RG" -n "$SA" -l "$LOC" --sku Standard_LRS --kind StorageV2 \

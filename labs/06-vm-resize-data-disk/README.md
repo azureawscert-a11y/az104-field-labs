@@ -1,6 +1,6 @@
 # Lab 06: Resize a VM and add a data disk
 
-**Ticket INC-1006 · Priority 2 · 30 minutes · about $0.10 per hour**
+**Ticket INC-1006 · Priority 2 · 30 minutes · $0.02 to $0.15 per hour**
 
 > "The reporting server keeps freezing and the disk is almost full. Can you give it more power and more space tonight?" (App owner)
 

@@ -12,8 +12,11 @@ SA="stlab10$(suffix)"
 
 say "1. VNet with a workload subnet and a subnet for private endpoints"
 az group create --name "$RG" --location "$LOC" --tags lab=10 -o none
-az network vnet create --resource-group "$RG" --name "$VNET" --address-prefixes 10.60.0.0/16 \
-  --subnet-name snet-app --subnet-prefixes 10.60.1.0/24 -o none
+# Create the VNet only once: "vnet create" on an existing VNet would try to remove snet-pe and its endpoint.
+if ! az network vnet show -g "$RG" -n "$VNET" -o none 2>/dev/null; then
+  az network vnet create --resource-group "$RG" --name "$VNET" --address-prefixes 10.60.0.0/16 \
+    --subnet-name snet-app --subnet-prefixes 10.60.1.0/24 -o none
+fi
 az network vnet subnet create --resource-group "$RG" --vnet-name "$VNET" --name snet-pe \
   --address-prefixes 10.60.2.0/24 -o none
 

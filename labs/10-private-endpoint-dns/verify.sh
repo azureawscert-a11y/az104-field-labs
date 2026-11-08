@@ -23,6 +23,13 @@ IN="$(az vm run-command invoke -g "$RG" -n vm-test01 --command-id RunShellScript
 if [[ "$IN" == *"10.60.2."* ]]; then pass "inside the VNet, $HOST resolves to a private IP"; else fail "expected 10.60.2.x, got: $IN"; fi
 
 say "From OUTSIDE (your shell), the public path is refused"
-CODE="$(curl -s -o /dev/null -w '%{http_code}' "https://${HOST}/?comp=list")"
-if [[ "$CODE" == "403" || "$CODE" == "409" ]]; then pass "public request refused ($CODE)"; else fail "expected 403/409 from outside, got $CODE"; fi
+# Must be the NETWORK rule refusing it (403 AuthorizationFailure). A 409 only means anonymous blob
+# access is off, which would happen even if the account were still open to the internet.
+RESP="$(curl -s -w '\n%{http_code}' "https://${HOST}/?comp=list")"
+CODE="$(tail -n1 <<< "$RESP")"
+if [[ "$CODE" == "403" && "$RESP" == *AuthorizationFailure* ]]; then
+  pass "public request refused by the network rule (403 AuthorizationFailure)"
+else
+  fail "expected 403 AuthorizationFailure from outside, got $CODE: $(head -c 150 <<< "$RESP")"
+fi
 summary

@@ -13,7 +13,7 @@ RG_ID="$(az group show --name "$RG" --query id -o tsv)"
 expect "policy assignment exists at RG scope" \
   "$(az policy assignment list --scope "$RG_ID" --query "[?name=='require-costcenter-tag'] | length(@)" -o tsv)" "1"
 
-expect_fail "an UNTAGGED storage account is denied by policy" \
+expect_denied "an UNTAGGED storage account is denied by policy" RequestDisallowedByPolicy \
   az storage account create --name "stnotag${SFX}" --resource-group "$RG" --location "$LOC" --sku Standard_LRS
 
 check "a TAGGED storage account is allowed" \
@@ -23,7 +23,7 @@ check "a TAGGED storage account is allowed" \
 expect "CanNotDelete lock is on the group" \
   "$(az lock list --resource-group "$RG" --query "[?level=='CanNotDelete'] | length(@)" -o tsv)" "1"
 
-expect_fail "deleting the locked storage account is blocked" \
+expect_denied "deleting the locked storage account is blocked by the lock" ScopeLocked \
   az storage account delete --name "sttag${SFX}" --resource-group "$RG" --yes
 
 echo

@@ -29,7 +29,11 @@ az container create --resource-group "$RG" --name aci-hello --image "$SERVER/hel
 
 say "4. Azure Container Apps: environment + app with external ingress, scale 0 to 3"
 az extension add --name containerapp --upgrade -o none   # newest features; avoids an install prompt mid-script
-az containerapp env create --name "$ENV" --resource-group "$RG" --location "$LOC" -o none
+# Create the environment only once. Without a workspace ID, every create makes a NEW Log Analytics
+# workspace with a random name, so a re-run would leave extra workspaces behind. This lab doesn't need logs.
+if ! az containerapp env show --name "$ENV" --resource-group "$RG" -o none 2>/dev/null; then
+  az containerapp env create --name "$ENV" --resource-group "$RG" --location "$LOC" --logs-destination none -o none
+fi
 az containerapp create --name ca-hello --resource-group "$RG" --environment "$ENV" \
   --image "$SERVER/hello:v1" --registry-server "$SERVER" \
   --registry-username "$ACR_USER" --registry-password "$ACR_PASS" \

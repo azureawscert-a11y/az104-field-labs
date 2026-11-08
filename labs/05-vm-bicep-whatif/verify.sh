@@ -15,7 +15,7 @@ expect "VM has 1 data disk at LUN 0" \
 expect "VM is running" \
   "$(az vm show --resource-group "$RG" --name vm-web01 --show-details --query powerState -o tsv)" "VM running"
 expect "VM has NO public IP" \
-  "$(az vm show --resource-group "$RG" --name vm-web01 --show-details --query publicIps -o tsv)" ""
+  "$(az vm show --resource-group "$RG" --name vm-web01 --show-details --query "publicIps || 'none'" -o tsv)" "none"
 expect "VM size is $VM_SIZE" \
   "$(az vm show --resource-group "$RG" --name vm-web01 --query hardwareProfile.vmSize -o tsv)" "$VM_SIZE"
 OS="$(az vm run-command invoke --resource-group "$RG" --name vm-web01 --command-id RunShellScript \

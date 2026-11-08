@@ -31,4 +31,4 @@ for s in "${STEPS[@]}"; do
 done
 LINE="$(date +%H:%M) $NAME:$RESULT"
 echo "$LINE" | tee -a "$LOGDIR/summary.txt"
-grep -E "FAIL|ERROR|Error|error:" "$LOG" | head -15
+grep -E "FAIL|ERROR|Error|error:" "$LOG" | head -15 || true

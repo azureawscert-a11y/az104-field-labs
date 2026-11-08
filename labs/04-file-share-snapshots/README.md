@@ -19,7 +19,7 @@
 |---|---|---|
 | Share snapshot | Deleted or changed files | Point-in-time, read-only copy of the whole share |
 | Soft delete (shares) | Someone deleting the whole share | Whole share, for the retention days |
-| Azure Backup for Files | Both, on a schedule, with retention | Managed snapshots + policy |
+| Azure Backup for Files | Both, on a schedule, with retention | Snapshots or a vaulted copy (outside the account), with a policy |
 
 ## Explain it (interview)
 "Soft delete for Azure Files works at the share level. It would not have brought back a single deleted file. The snapshot did. In production I would protect the share with Azure Backup so snapshots are taken on a schedule."

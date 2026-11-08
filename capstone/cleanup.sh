@@ -23,7 +23,14 @@ if az group show -n "$RG" -o none 2>/dev/null; then
   fi
 fi
 OPS_ID="$(az ad group show --group grp-clinic-ops --query id -o tsv 2>/dev/null || true)"
-if [[ -n "$OPS_ID" ]]; then az ad group delete --group "$OPS_ID"; fi
+if [[ -n "$OPS_ID" ]]; then
+  # If the resource group is still there (vault kept by soft delete), remove the group's role assignment
+  # first, or it would be left behind as "Identity not found".
+  RG_ID="$(az group show -n "$RG" --query id -o tsv 2>/dev/null || true)"
+  if [[ -n "$RG_ID" ]]; then az role assignment delete --assignee-object-id "$OPS_ID" --scope "$RG_ID" 2>/dev/null || true; fi
+  az ad group delete --group "$OPS_ID"
+fi
 echo "Cleanup started. Check in 10 minutes: az group exists -n $RG"
-echo "Azure may also leave empty, free groups AzureBackupRG_${LOC}_1 and NetworkWatcherRG. Delete them when you finish all labs:"
-echo "  az group delete -n AzureBackupRG_${LOC}_1 --yes; az group delete -n NetworkWatcherRG --yes"
+echo "Azure Backup may also leave an empty, free group AzureBackupRG_${LOC}_1. Delete it when you finish all labs:"
+echo "  az group delete -n AzureBackupRG_${LOC}_1 --yes"
+echo "NetworkWatcherRG is free and shared by your subscription: you can leave it."

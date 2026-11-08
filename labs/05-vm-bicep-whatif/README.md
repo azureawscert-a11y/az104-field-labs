@@ -1,6 +1,6 @@
 # Lab 05: Deploy a VM from Bicep, preview first
 
-**Ticket CHG-2005 · Priority 3 · 30 minutes · about $0.05 per hour**
+**Ticket CHG-2005 · Priority 3 · 30 minutes · $0.01 to $0.10 per hour**
 
 > "Dev needs a small Linux test server. No public IP. And from now on, every change goes through a template we can review." (Team lead)
 

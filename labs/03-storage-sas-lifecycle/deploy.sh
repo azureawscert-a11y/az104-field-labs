@@ -26,13 +26,10 @@ az storage blob upload --container-name "$CONTAINER" --name reports/q3-report.tx
 
 say "3. Stored access policy: read + list for 30 days"
 EXPIRY="$(date -u -d '+30 days' '+%Y-%m-%dT%H:%MZ' 2>/dev/null || date -u -v+30d '+%Y-%m-%dT%H:%MZ')"
-# Note: "policy show" exits 0 even when the policy is missing, so it can't be used as a test.
-# Create the policy; if it already exists (re-run), update it instead.
-if ! az storage container policy create --container-name "$CONTAINER" --name "$POLICY_NAME" \
-     --permissions rl --expiry "$EXPIRY" --account-name "$SA" --account-key "$KEY" -o none 2>/dev/null; then
-  az storage container policy update --container-name "$CONTAINER" --name "$POLICY_NAME" \
-    --permissions rl --expiry "$EXPIRY" --account-name "$SA" --account-key "$KEY" -o none
-fi
+# Note: "policy show" exits 0 even when the policy is missing, so never use it as a test.
+# "policy create" overwrites a policy with the same name, so this is safe to re-run.
+az storage container policy create --container-name "$CONTAINER" --name "$POLICY_NAME" \
+  --permissions rl --expiry "$EXPIRY" --account-name "$SA" --account-key "$KEY" -o none
 az storage container policy list --container-name "$CONTAINER" --account-name "$SA" --account-key "$KEY" -o table
 
 say "4. Service SAS that points at the policy (no permissions or expiry inside the token)"

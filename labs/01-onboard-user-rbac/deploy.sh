@@ -19,18 +19,21 @@ say "1. Resource group the team will read"
 az group create --name "$RG" --location "$LOC" --tags lab=01 owner=finance -o none
 
 say "2. Create the user (skip if it already exists)"
-if ! az ad user show --id "$UPN" -o none 2>/dev/null; then
-  az ad user create --display-name "$DISPLAY" --user-principal-name "$UPN" \
-    --password "$PASS" --force-change-password-next-sign-in true -o none
+if USER_ID="$(az ad user show --id "$UPN" --query id -o tsv 2>/dev/null)"; then
+  echo "  User already exists. To give her a new temporary password:"
+  echo "  az ad user update --id $UPN --password '<new password>' --force-change-password-next-sign-in true"
+else
+  # Take the ID from the create itself: a lookup right after creating can miss the new user.
+  USER_ID="$(az ad user create --display-name "$DISPLAY" --user-principal-name "$UPN" \
+    --password "$PASS" --force-change-password-next-sign-in true --query id -o tsv)"
   echo "  Temporary password (give it to the user privately): $PASS"
 fi
-USER_ID="$(az ad user show --id "$UPN" --query id -o tsv)"
 
 say "3. Create the security group and add the user"
-if [[ -z "$(az ad group list --display-name "$GROUP" --query '[0].id' -o tsv)" ]]; then
-  az ad group create --display-name "$GROUP" --mail-nickname "$GROUP" -o none
+GROUP_ID="$(az ad group list --display-name "$GROUP" --query '[0].id' -o tsv)"
+if [[ -z "$GROUP_ID" ]]; then
+  GROUP_ID="$(az ad group create --display-name "$GROUP" --mail-nickname "$GROUP" --query id -o tsv)"
 fi
-GROUP_ID="$(az ad group show --group "$GROUP" --query id -o tsv)"
 if [[ "$(az ad group member check --group "$GROUP_ID" --member-id "$USER_ID" --query value -o tsv)" != "true" ]]; then
   az ad group member add --group "$GROUP_ID" --member-id "$USER_ID"
 fi
@@ -42,4 +45,4 @@ assign_role "$GROUP_ID" Group "Reader" "$RG_ID"
 
 echo
 echo "Done. User: $UPN  Group: $GROUP  Role: Reader  Scope: $RG"
-echo "Next: ./verify.sh"
+echo "Next: ./verify.sh   (a new role assignment can take up to 10 minutes to show up in the portal)"

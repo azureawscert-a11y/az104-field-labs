@@ -14,7 +14,7 @@ StorageBlobLogs
 
 // 3. Failed requests only, with who and from where
 StorageBlobLogs
-| where StatusCode >= 400
+| where toint(StatusCode) >= 400   // StatusCode is a string column
 | project TimeGenerated, OperationName, StatusCode, StatusText, CallerIpAddress, Uri
 
 // 4. Requests per 5 minutes, as a chart

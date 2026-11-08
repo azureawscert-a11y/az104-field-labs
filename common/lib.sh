@@ -33,6 +33,20 @@ expect_fail() {
   if "$@" >/dev/null 2>&1; then fail "$desc"; else pass "$desc"; fi
 }
 
+# expect_denied "description" PATTERN command args...
+# PASS only if the command fails AND its error contains PATTERN (e.g. RequestDisallowedByPolicy).
+# A failure for any other reason (name taken, quota, typo) is a FAIL, so a broken lab can't look healthy.
+expect_denied() {
+  local desc="$1" pattern="$2" out; shift 2
+  if out="$("$@" 2>&1)"; then
+    fail "$desc (it was allowed)"
+  elif grep -q "$pattern" <<< "$out"; then
+    pass "$desc"
+  else
+    fail "$desc (failed for another reason: $(grep -m1 -E 'ERROR|Code|Message' <<< "$out" | cut -c1-150))"
+  fi
+}
+
 summary() {
   echo
   if [[ "$FAILS" -eq 0 ]]; then
@@ -58,8 +72,11 @@ suffix() {
 
 # Default verified domain of your tenant, for new user names (user@yourtenant.onmicrosoft.com)
 tenant_domain() {
-  az rest --method get --url "https://graph.microsoft.com/v1.0/domains" \
-    --query "value[?isDefault].id | [0]" -o tsv
+  local d
+  d="$(az rest --method get --url "https://graph.microsoft.com/v1.0/domains" \
+    --query "value[?isDefault].id | [0]" -o tsv)"
+  [[ -n "$d" ]] || { echo "ERROR: could not read your tenant's default domain from Microsoft Graph" >&2; exit 1; }
+  echo "$d"
 }
 
 # assign_role "objectId" "PrincipalType" "Role name" "scope"
@@ -73,7 +90,9 @@ assign_role() {
     fi
     echo "  waiting for Entra ID replication ($i/6)"; sleep 15
   done
-  if [[ "$(az role assignment list --assignee "$oid" --role "$role" --scope "$scope" --query 'length(@)' -o tsv)" == "0" ]]; then
+  local n
+  n="$(az role assignment list --assignee-object-id "$oid" --role "$role" --scope "$scope" --query 'length(@)' -o tsv 2>/dev/null)"
+  if [[ "$n" != "1" ]]; then
     echo "ERROR: could not assign '$role'. You need Owner or User Access Administrator on $scope." >&2
     echo "Run this to see the real error:" >&2
     echo "  az role assignment create --assignee-object-id $oid --assignee-principal-type $ptype --role \"$role\" --scope $scope" >&2
@@ -83,12 +102,20 @@ assign_role() {
 
 # backup_enable_once RG VAULT VM [POLICY]  -> enables VM backup only if the VM is not already protected (safe to re-run)
 backup_enable_once() {
-  local rg="$1" vault="$2" vm="$3" policy="${4:-DefaultPolicy}"
-  if [[ "$(az backup item list -g "$rg" --vault-name "$vault" --backup-management-type AzureIaasVM \
-          --query "[?properties.friendlyName=='$vm'] | length(@)" -o tsv)" == "0" ]]; then
-    az backup protection enable-for-vm -g "$rg" --vault-name "$vault" --vm "$vm" --policy-name "$policy" -o none
-  else
+  local rg="$1" vault="$2" vm="$3" policy="${4:-DefaultPolicy}" active deleted
+  # Capture first: a failing $( ) inside [[ ]] would be silently ignored.
+  active="$(az backup item list -g "$rg" --vault-name "$vault" --backup-management-type AzureIaasVM \
+    --query "[?properties.friendlyName=='$vm' && properties.isScheduledForDeferredDelete!=\`true\`] | length(@)" -o tsv)" || return 1
+  deleted="$(az backup item list -g "$rg" --vault-name "$vault" --backup-management-type AzureIaasVM \
+    --query "[?properties.friendlyName=='$vm' && properties.isScheduledForDeferredDelete==\`true\`] | length(@)" -o tsv)" || return 1
+  if [[ "$active" != "0" ]]; then
     echo "  $vm is already protected, skipping"
+  elif [[ "$deleted" != "0" ]]; then
+    echo "  $vm has a soft-deleted backup in $vault. Bring it back first, then run deploy again:" >&2
+    echo "  az backup protection undelete -g $rg --vault-name $vault -c $vm -i $vm --backup-management-type AzureIaasVM --workload-type VM" >&2
+    return 1
+  else
+    az backup protection enable-for-vm -g "$rg" --vault-name "$vault" --vm "$vm" --policy-name "$policy" -o none
   fi
 }
 

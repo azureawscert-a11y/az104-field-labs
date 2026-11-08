@@ -9,5 +9,7 @@ require_login
 RG_ID="$(az group show --name "$RG" --query id -o tsv 2>/dev/null || true)"
 az lock delete --name lock-no-delete --resource-group "$RG" 2>/dev/null || true
 if [[ -n "$RG_ID" ]]; then az policy assignment delete --name require-costcenter-tag --scope "$RG_ID" 2>/dev/null || true; fi
-az group delete --name "$RG" --yes --no-wait 2>/dev/null || true
+if [[ -n "$RG_ID" ]]; then
+  az group delete --name "$RG" --yes --no-wait || echo "Group delete failed (is the lock still there? az lock list -g $RG). Run ./cleanup.sh again." >&2
+fi
 echo "Cleanup started (lock removed first, then policy assignment, then the group)."

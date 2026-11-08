@@ -16,5 +16,7 @@ if [[ -n "$GROUP_ID" && -n "$RG_ID" ]]; then
 fi
 az ad user delete --id "$UPN" 2>/dev/null || true
 if [[ -n "$GROUP_ID" ]]; then az ad group delete --group "$GROUP_ID" || true; fi
-az group delete --name "$RG" --yes --no-wait 2>/dev/null || true
+if [[ -n "$RG_ID" ]]; then
+  az group delete --name "$RG" --yes --no-wait || echo "Group delete failed. Read the error above and run ./cleanup.sh again." >&2
+fi
 echo "Cleanup started. Deleted users stay in Entra ID > Deleted users for 30 days (you can restore them)."

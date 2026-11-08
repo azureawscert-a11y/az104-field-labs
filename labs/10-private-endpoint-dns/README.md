@@ -1,6 +1,6 @@
 # Lab 10: Private endpoint and private DNS for storage
 
-**Ticket SEC-3010 · Priority 1 · 40 minutes · about $0.05 per hour**
+**Ticket SEC-3010 · Priority 1 · 40 minutes · $0.03 to $0.12 per hour**
 
 > "Security audit finding: the HR storage account is reachable from the internet. Make it private to our network only, without breaking the app." (Security team)
 

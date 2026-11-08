@@ -304,7 +304,7 @@ resource vmApp 'Microsoft.Compute/virtualMachines@2024-07-01' = {
     }
     storageProfile: {
       // v6 sizes only support NVMe disks; older sizes use SCSI
-      diskControllerType: contains(vmSize, '_v6') ? 'NVMe' : 'SCSI'
+      diskControllerType: (contains(toLower(vmSize), '_v6') || contains(toLower(vmSize), '_v7')) ? 'NVMe' : 'SCSI'
       imageReference: {
         publisher: 'Canonical'
         offer: 'ubuntu-24_04-lts'

@@ -20,4 +20,6 @@ STG="$(curl -s "https://$APP-staging.azurewebsites.net/")"
 if [[ "$STG" == *"Version 1"* ]]; then pass "staging now holds Version 1 (instant rollback = swap again)"; else fail "staging should hold Version 1 after a swap"; fi
 expect "sticky setting stayed with production" \
   "$(az webapp config appsettings list --name "$APP" --resource-group "$RG" --query "[?name=='ENVIRONMENT'].value | [0]" -o tsv)" "production"
+expect "sticky setting stayed with staging" \
+  "$(az webapp config appsettings list --name "$APP" --resource-group "$RG" --slot staging --query "[?name=='ENVIRONMENT'].value | [0]" -o tsv)" "staging"
 summary

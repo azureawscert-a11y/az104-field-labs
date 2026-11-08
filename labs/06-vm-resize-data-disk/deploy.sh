@@ -21,8 +21,18 @@ az vm list-vm-resize-options --resource-group "$RG" --name "$VM" \
   --query "[?numberOfCores<=\`2\`].{size:name, vCPUs:numberOfCores, memMB:memoryInMB} | [:12]" -o table
 
 say "3. Resize $VM_SIZE -> $VM_SIZE_BIG (the VM restarts, plan a maintenance window)"
-if [[ "$(az vm show -g "$RG" -n "$VM" --query hardwareProfile.vmSize -o tsv)" != "$VM_SIZE_BIG" ]]; then
-  az vm resize --resource-group "$RG" --name "$VM" --size "$VM_SIZE_BIG" -o none
+# A failed resize can leave the NEW size in the VM model while the VM still runs the old one,
+# so check the provisioning state too, not just the size.
+if [[ "$(az vm show -g "$RG" -n "$VM" --query hardwareProfile.vmSize -o tsv)" != "$VM_SIZE_BIG" ||
+      "$(az vm show -g "$RG" -n "$VM" --query provisioningState -o tsv)" != "Succeeded" ]]; then
+  if [[ "$(az vm list-vm-resize-options -g "$RG" -n "$VM" --query "[?name=='$VM_SIZE_BIG'] | length(@)" -o tsv)" == "1" ]]; then
+    az vm resize --resource-group "$RG" --name "$VM" --size "$VM_SIZE_BIG" -o none
+  else
+    echo "  $VM_SIZE_BIG is not on this hardware cluster: deallocate, resize, start"
+    az vm deallocate -g "$RG" -n "$VM" -o none
+    az vm resize -g "$RG" -n "$VM" --size "$VM_SIZE_BIG" -o none
+    az vm start -g "$RG" -n "$VM" -o none
+  fi
 fi
 
 say "4. Attach a new 8 GiB Standard SSD data disk at LUN 0"
@@ -42,7 +52,7 @@ done
 PART="${DISK}1"; case "$DISK" in *nvme*) PART="${DISK}p1";; esac
 if ! lsblk -no MOUNTPOINT "$PART" 2>/dev/null | grep -q /data; then
   parted "$DISK" --script mklabel gpt mkpart primary ext4 0% 100%
-  sleep 2; mkfs.ext4 -q "$PART"; mkdir -p /data
+  partprobe "$DISK"; udevadm settle; mkfs.ext4 -q "$PART"; mkdir -p /data
   echo "UUID=$(blkid -s UUID -o value $PART) /data ext4 defaults,nofail 0 2" >> /etc/fstab
   mount -a
 fi
