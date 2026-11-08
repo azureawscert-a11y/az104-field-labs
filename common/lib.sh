@@ -114,27 +114,72 @@ group_id_exact() {
   echo "$ids"
 }
 
+# Groups the labs create carry this description, so a lab never changes or deletes someone else's group.
+LAB_GROUP_MARK="Created by az104-field-labs"
+
+# lab_group_ensure NAME -> prints the ID of the lab's own Entra group, creating it if needed.
+# Stops if a group with this exact name exists but was not created by these labs.
+lab_group_ensure() {
+  local id desc
+  id="$(group_id_exact "$1")" || return 1
+  if [[ -z "$id" ]]; then
+    az ad group create --display-name "$1" --mail-nickname "$1" --description "$LAB_GROUP_MARK" --query id -o tsv
+    return
+  fi
+  desc="$(az ad group show --group "$id" --query description -o tsv)" || return 1
+  if [[ "$desc" != "$LAB_GROUP_MARK" ]]; then
+    echo "ERROR: a group named '$1' already exists and was not created by these labs." >&2
+    echo "The lab will not change it. Rename that group, or change the group name at the top of the script." >&2
+    return 1
+  fi
+  echo "$id"
+}
+
+# lab_group_id NAME -> prints the ID only if the group exists AND was created by these labs (for cleanup).
+lab_group_id() {
+  local id desc
+  id="$(group_id_exact "$1")" || return 1
+  [[ -z "$id" ]] && return 0
+  desc="$(az ad group show --group "$id" --query description -o tsv)" || return 1
+  if [[ "$desc" == "$LAB_GROUP_MARK" ]]; then echo "$id"
+  else echo "  group '$1' was not created by these labs: leaving it alone" >&2; fi
+}
+
 # delete_group RG -> starts deleting a resource group. Already gone is fine; any other error returns 1.
+# A failed lookup (for example an expired sign-in) is an error, never "already gone".
 delete_group() {
-  local out
-  if [[ "$(az group exists -n "$1")" != "true" ]]; then echo "  $1 is already gone"; return 0; fi
+  local exists out
+  exists="$(az group exists -n "$1")" || { echo "Could not check whether $1 exists. Are you signed in? (az login)" >&2; return 1; }
+  case "$exists" in
+    false) echo "  $1 is already gone"; return 0 ;;
+    true) ;;
+    *) echo "Unexpected answer '$exists' when checking $1." >&2; return 1 ;;
+  esac
   if out="$(az group delete --name "$1" --yes --no-wait 2>&1)"; then echo "Cleanup started for $1."; return 0; fi
   echo "$out" >&2
   echo "Could not delete $1. Read the error above, fix it, and run ./cleanup.sh again." >&2
   return 1
 }
 
-# delete_vm_restore_points VM -> deletes the VM's instant-restore snapshots (restore point collections).
-# Azure Backup keeps them in AzureBackupRG_<region>_1. Unlike soft-deleted vault data they are BILLED,
-# and they are not removed when protection stops, so the labs remove them explicitly.
+# delete_vm_restore_points VM_RESOURCE_ID -> deletes that VM's instant-restore snapshots (restore point
+# collections). Azure Backup keeps them in AzureBackupRG_<region>_1. Unlike soft-deleted vault data they
+# are BILLED, and stopping protection does not remove them. Only collections whose source is exactly
+# this VM are deleted (names alone could match another VM with the same or a longer name).
 delete_vm_restore_points() {
-  local ids
+  local vmid="$1" ids id src n=0
   ids="$(az resource list --resource-type Microsoft.Compute/restorePointCollections \
-        --query "[?starts_with(name, 'AzureBackup_$1_')].id" -o tsv)" || return 1
-  [[ -z "$ids" ]] && return 0
-  echo "  deleting instant-restore snapshots of $1 (they are billed, even while the backup is soft-deleted)"
-  # shellcheck disable=SC2086  # word splitting on IDs is intended
-  az resource delete --ids $ids -o none
+        --query "[?starts_with(name, 'AzureBackup_')].id" -o tsv)" || return 1
+  for id in $ids; do
+    src="$(az resource show --ids "$id" --query properties.source.id -o tsv)" || return 1
+    if [[ -n "$src" && "${src,,}" == "${vmid,,}" ]]; then
+      az resource delete --ids "$id" -o none || return 1
+      n=$((n + 1))
+    fi
+  done
+  if [[ $n -gt 0 ]]; then
+    echo "  deleted $n instant-restore snapshot collection(s) of this VM (billed, even while the backup is soft-deleted)"
+  fi
+  return 0
 }
 
 # pe_ip RG PRIVATE_ENDPOINT -> prints the private endpoint's own IP (from its network interface)
@@ -193,7 +238,7 @@ backup_cleanup() {
     az backup protection disable -g "$rg" --vault-name "$vault" --container-name "$vm" --item-name "$vm" \
       --backup-management-type AzureIaasVM --delete-backup-data true --yes -o none || return 1
   fi
-  delete_vm_restore_points "$vm" || return 1
+  delete_vm_restore_points "/subscriptions/$(az account show --query id -o tsv)/resourceGroups/$rg/providers/Microsoft.Compute/virtualMachines/$vm" || return 1
   if az backup vault delete -g "$rg" --name "$vault" --yes --force -o none 2>/dev/null; then
     echo "  vault $vault deleted"; return 0
   fi
