@@ -19,7 +19,7 @@
 ## Things to know
 - Slots need **Standard, Premium or Isolated** tiers. Free/Basic cannot have them.
 - A swap warms up the staging instances before switching traffic, so users see no cold start.
-- Settings marked as **slot settings** (sticky) do not move. Everything else swaps with the code.
+- Settings marked as **slot settings** (sticky) do not move. Some platform settings never move either (custom domains, TLS bindings, scale settings, managed identities, VNet integration). The code and the other app settings swap.
 - Scale out (more instances) vs scale up (bigger tier): configure scale out under the plan, manually or with autoscale rules (Standard and higher).
 
 ## Explain it (interview)
