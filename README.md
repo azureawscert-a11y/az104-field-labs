@@ -18,7 +18,7 @@ Each lab is a realistic help-desk or project ticket that a junior Azure administ
 ```bash
 # In Cloud Shell: Manage files > Upload > az104-field-labs.zip, then:
 unzip az104-field-labs.zip -d az104-field-labs && cd az104-field-labs
-# or clone it: git clone https://github.com/azureawscert-a11y/az104-field-labs.git
+# or clone it: git clone https://github.com/azureawscert-a11y/az104-field-labs.git && cd az104-field-labs
 chmod +x labs/*/*.sh capstone/*.sh tools/*.sh
 git config core.fileMode false   # clones only: so chmod does not block "git pull" later
 cd labs/03-storage-sas-lifecycle
@@ -32,7 +32,7 @@ Then try it yourself: read `deploy.sh`, delete the lab, and rebuild it by typing
 
 ## Safety rules
 
-- Every lab creates **one resource group** named `rg-az104-labNN`. `cleanup.sh` deletes that group and everything billable in it. Azure itself may leave two **empty, free** helper groups behind: `AzureBackupRG_<region>_1` (labs 12 and capstone, created by Azure Backup for restore points) and `NetworkWatcherRG` (labs 09 and capstone). Delete them when you finish all labs with `az group delete -n AzureBackupRG_<region>_1 --yes` and `az group delete -n NetworkWatcherRG --yes` (Network Watcher is recreated automatically when needed).
+- Every lab creates **one resource group** named `rg-az104-labNN`. `cleanup.sh` deletes that group and everything billable in it. Azure itself may leave two helper groups behind: `AzureBackupRG_<region>_1` (labs 12 and capstone, created by Azure Backup for VM snapshots; cleanup deletes the lab's snapshots, which are billed) and `NetworkWatcherRG` (labs 09 and capstone, free). Delete them when you finish all labs with `az group delete -n AzureBackupRG_<region>_1 --yes` and `az group delete -n NetworkWatcherRG --yes` (Network Watcher is recreated automatically when needed).
 - Run `cleanup.sh` the same day. Several labs create VMs, App Service plans or backup vaults that cost money every hour.
 - Never paste real passwords, keys or SAS tokens into GitHub. The scripts print secrets only to your terminal.
 - `deploy.sh` stops on the first error. Read the message, fix the cause, and run it again: deploy scripts are safe to re-run. `verify.sh` and `cleanup.sh` keep going and report every problem they find.
