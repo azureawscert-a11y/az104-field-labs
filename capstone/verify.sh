@@ -46,10 +46,14 @@ say "Storage"
 expect "public network access Disabled" "$(az storage account show -n "$SA" -g "$RG" --query publicNetworkAccess -o tsv)" "Disabled"
 IP="$(az vm run-command invoke -g "$RG" -n vm-app01 --command-id RunShellScript \
   --scripts "getent hosts ${SA}.blob.core.windows.net | awk '{print \$1}'" --query "value[0].message" -o tsv)"
-if [[ "$IP" == *"10.10.2."* ]]; then pass "app VM resolves storage to the private endpoint (DNS zone is linked to the spoke VNet too)"; else fail "expected 10.10.2.x, got $IP"; fi
+PEIP="$(pe_ip "$RG" "pe-${SA}-blob")"
+IP="$(grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' <<< "$IP" | head -1)"
+if [[ -n "$PEIP" && "$IP" == "$PEIP" ]]; then pass "app VM resolves storage to the private endpoint $IP (DNS zone is linked to the spoke VNet too)"
+else fail "expected ${PEIP:-the endpoint IP}, got ${IP:-no answer}"; fi
 
 say "Operations"
-expect "VM is protected by backup" \
-  "$(az backup item list -g "$RG" --vault-name rsv-nwclinic --query "length(@)" -o tsv)" "1"
+# IRPending = protection is on and the first scheduled backup has not run yet (normal right after deploy)
+BSTATE="$(backup_state "$RG" rsv-nwclinic vm-app01)"
+if [[ "$BSTATE" =~ ^(Protected|IRPending)$ ]]; then pass "vm-app01 is protected by backup ($BSTATE)"; else fail "vm-app01 backup state is '${BSTATE:-not protected}'"; fi
 expect "CPU alert enabled" "$(az monitor metrics alert show -g "$RG" -n alert-vm-app01-cpu --query enabled -o tsv)" "true"
 summary

@@ -33,10 +33,10 @@ az policy assignment create --name cap-allowed-locations --display-name "Approve
   --params "{\"listOfAllowedLocations\":{\"value\":[\"$LOC\",\"global\"]}}" -o none
 
 say "2. RBAC: an ops group gets Virtual Machine Contributor on the resource group"
-if [[ -z "$(az ad group list --display-name grp-clinic-ops --query '[0].id' -o tsv)" ]]; then
-  az ad group create --display-name grp-clinic-ops --mail-nickname grp-clinic-ops -o none
+OPS_ID="$(group_id_exact grp-clinic-ops)"
+if [[ -z "$OPS_ID" ]]; then
+  OPS_ID="$(az ad group create --display-name grp-clinic-ops --mail-nickname grp-clinic-ops --query id -o tsv)"
 fi
-OPS_ID="$(az ad group show --group grp-clinic-ops --query id -o tsv)"
 assign_role "$OPS_ID" Group "Virtual Machine Contributor" "$RG_ID"
 
 say "3. Infrastructure from Bicep (preview, then deploy)"
