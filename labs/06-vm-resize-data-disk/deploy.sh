@@ -49,8 +49,8 @@ if [[ "$POWER" != "PowerState/running" ]]; then
   echo "  VM is $POWER: starting it"
   az vm start -g "$RG" -n "$VM" -o none
 fi
-# Safe to re-run: it only partitions a disk with no partition, only formats a partition with no
-# filesystem, and never touches a disk that already holds data.
+# Safe to re-run: it only partitions a completely blank disk, only formats a partition with no
+# filesystem, and stops if the disk holds anything it does not expect.
 # shellcheck disable=SC2016  # the script runs inside the VM, so $ must not expand here
 az vm run-command invoke --resource-group "$RG" --name "$VM" --command-id RunShellScript --scripts '
 set -e
@@ -63,6 +63,12 @@ done
 [ -n "$DISK" ] || { echo "ERROR: no data disk found at LUN 0"; exit 1; }
 PART="${DISK}1"; case "$DISK" in *nvme*) PART="${DISK}p1";; esac
 if [ ! -e "$PART" ]; then
+  # No partition 1. Only partition a disk that is truly blank: "blkid -p" exits 2 when it finds
+  # no filesystem or partition table at all. Anything else, stop and touch nothing.
+  rc=0; blkid -p "$DISK" >/dev/null 2>&1 || rc=$?
+  if [ "$rc" -ne 2 ]; then
+    echo "ERROR: $DISK has no partition 1 but is not blank (blkid exit $rc). Not touching it."; exit 1
+  fi
   parted "$DISK" --script mklabel gpt mkpart primary ext4 0% 100%
   partprobe "$DISK"; udevadm settle
 fi
