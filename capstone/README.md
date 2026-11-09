@@ -34,9 +34,11 @@ Runbook template, one block per task:
 
 ```markdown
 # Runbook: restore vm-app01
-Scope:       rg-az104-capstone (your region). Who may run it: Backup Operator or higher
+Scope:       rg-az104-capstone (your region)
+Who may run: Backup Operator (vault), Virtual Machine Contributor (vm-app01),
+             Contributor (target RG), Storage Account Contributor (staging account)
 Before:      a recovery point exists (Backup items in rsv-nwclinic shows one)
-Steps:       1. the az backup restore command you used
+Steps:       1. the az backup restore restore-disks command you ran
              2. the command that checks the restore job finished
 Proof:       what you ran to show it worked, and what it showed
 Undo:        how to remove what the restore created
