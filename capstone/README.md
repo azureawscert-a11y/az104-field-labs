@@ -20,7 +20,30 @@
    - A diagram of the hub, spoke, peering, private endpoint and DNS (draw.io or Excalidraw).
    - A one-page runbook: how to grant access, restore the VM, respond to the CPU alert.
    - Screenshots of `verify.sh` all PASS. Remove subscription IDs and emails first.
-4. `./cleanup.sh`
+4. Grade the handover with the checklist below, then `./cleanup.sh`.
+
+## Handover checklist
+| Part | Passes when | Proof to include |
+|---|---|---|
+| 1. Diagram | Shows both VNets with their ranges, the peering, the private endpoint in snet-pe, the private DNS zone linked to both VNets, the VM with no public IP, and where the vault and workspace sit. Someone else can trace the path the VM takes to reach storage. | The diagram, plus one sentence describing that path |
+| 2. Evidence | `verify.sh` all PASS, plus one expected failure you caused on purpose (for example a resource outside the allowed region denied by policy), with the error text. | Two screenshots, IDs and emails removed |
+| 3. Runbook | Each task (grant access, respond to the CPU alert, restore the VM) has a starting state, the commands, proof it worked, and how to undo it. Another person can follow it without asking you. | The runbook, from the template below |
+| 4. One change | Pick a new requirement (a second spoke, a 70% CPU threshold, a different backup policy) and explain in three to five sentences what you would change and what could break. | A "Change request" section in your README |
+
+Runbook template, one block per task:
+
+```markdown
+# Runbook: restore vm-app01
+Scope:       rg-az104-capstone (your region). Who may run it: Backup Operator or higher
+Before:      a recovery point exists (Backup items in rsv-nwclinic shows one)
+Steps:       1. the az backup restore command you used
+             2. the command that checks the restore job finished
+Proof:       what you ran to show it worked, and what it showed
+Undo:        how to remove what the restore created
+If it fails: the first thing to check (job error, permissions, region)
+```
+
+The real test: give one runbook task to someone else and let them do it from your document alone. Where they get stuck, fix the document.
 
 ## Stretch goals
 - Add a second spoke and prove spoke-to-spoke traffic does **not** flow (peering is not transitive).
