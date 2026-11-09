@@ -15,16 +15,35 @@ Each lab is a realistic help-desk or project ticket that a junior Azure administ
 
 ## How every lab works
 
+**1. Get the files** (pick one route):
+
 ```bash
-# In Cloud Shell: Manage files > Upload > az104-field-labs.zip, then:
+# Route A, ZIP: in Cloud Shell choose Manage files > Upload > az104-field-labs.zip, then:
 unzip az104-field-labs.zip -d az104-field-labs && cd az104-field-labs
-# or clone it: git clone https://github.com/azureawscert-a11y/az104-field-labs.git && cd az104-field-labs
 chmod +x labs/*/*.sh capstone/*.sh tools/*.sh
-git config core.fileMode false   # clones only: so chmod does not block "git pull" later
+```
+
+```bash
+# Route B, Git:
+git clone https://github.com/azureawscert-a11y/az104-field-labs.git && cd az104-field-labs
+chmod +x labs/*/*.sh capstone/*.sh tools/*.sh
+git config core.fileMode false   # so chmod does not block "git pull" later
+```
+
+**2. Once per subscription, before the first lab** (details in [the setup scripts](#before-the-first-lab-two-setup-scripts) below):
+
+```bash
+EMAIL=you@example.com bash tools/setup-subscription.sh   # replace the email first
+bash tools/check-region.sh
+```
+
+**3. Every lab, from the repo folder:**
+
+```bash
 cd labs/03-storage-sas-lifecycle
 cat README.md        # read the ticket first
 ./deploy.sh          # build it
-./verify.sh          # PASS / FAIL checks
+./verify.sh          # PASS / FAIL checks: stop here and explain the result
 ./cleanup.sh         # delete everything the lab created
 ```
 
