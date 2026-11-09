@@ -8,7 +8,7 @@ Each lab is a realistic help-desk or project ticket that a junior Azure administ
 
 ## Free sample of the book
 
-[**Download the free sample (PDF, 22 pages)**](sample/AZ-104-Field-Guide-FREE-SAMPLE.pdf): the contents, the "choose your route" page, Chapter 2 (Azure CLI and PowerShell grammar) and Lab 01 as it appears in the book.
+[**Download the free sample (PDF, 22 pages)**](https://github.com/azureawscert-a11y/az104-field-labs/raw/main/sample/AZ-104-Field-Guide-FREE-SAMPLE.pdf): the contents, the "choose your route" page, Chapter 2 (Azure CLI and PowerShell grammar) and Lab 01 as it appears in the book.
 
 The full book has 259 pages: all five exam domains, 12 labs and a capstone, 156 practice questions, a job chapter, and a field reference with portal paths and 28 real error messages. The link to buy it will be added here at launch.
 
