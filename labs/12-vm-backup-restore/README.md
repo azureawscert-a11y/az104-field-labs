@@ -1,4 +1,4 @@
-# Lab 12: Back up a VM and get a file back
+# Lab 12: Back up a VM and restore its disks
 
 **Ticket INC-1012 · Priority 1 · 90 minutes (mostly waiting; the first backup took 56 minutes in our test) · $0.02 to $0.15 per hour**
 
