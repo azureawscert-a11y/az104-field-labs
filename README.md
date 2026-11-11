@@ -14,9 +14,9 @@ The full book has 264 pages: all five exam domains, 12 labs and a capstone, 156 
 
 **Get the book:**
 
-- [Complete Bundle: book, labs and Practice Pack (US$29)](https://jeysingh.gumroad.com/l/az104-complete-bundle)
-- [Field Guide and labs only (US$19)](https://jeysingh.gumroad.com/l/az104-field-guide)
-- [Practice Pack only (US$12)](https://jeysingh.gumroad.com/l/az104-practice-pack)
+- [Complete Bundle: book, labs and Practice Pack](https://jeysingh.gumroad.com/l/az104-complete-bundle)
+- [Field Guide and labs only](https://jeysingh.gumroad.com/l/az104-field-guide)
+- [Practice Pack only](https://jeysingh.gumroad.com/l/az104-practice-pack)
 
 ## What you need
 
