@@ -34,10 +34,19 @@ az extension add --name containerapp --upgrade -o none   # newest features; avoi
 if ! az containerapp env show --name "$ENV" --resource-group "$RG" -o none 2>/dev/null; then
   az containerapp env create --name "$ENV" --resource-group "$RG" --location "$LOC" --logs-destination none -o none
 fi
-az containerapp create --name ca-hello --resource-group "$RG" --environment "$ENV" \
-  --image "$SERVER/hello:v1" --registry-server "$SERVER" \
-  --registry-username "$ACR_USER" --registry-password "$ACR_PASS" \
-  --ingress external --target-port 80 --min-replicas 0 --max-replicas 3 -o none
+# A brand-new environment sometimes rejects the first create ("image ... invalid or missing")
+# while it is still settling. Try up to three times before giving up.
+for try in 1 2 3; do
+  if az containerapp create --name ca-hello --resource-group "$RG" --environment "$ENV" \
+    --image "$SERVER/hello:v1" --registry-server "$SERVER" \
+    --registry-username "$ACR_USER" --registry-password "$ACR_PASS" \
+    --ingress external --target-port 80 --min-replicas 0 --max-replicas 3 -o none; then
+    break
+  fi
+  [[ "$try" -eq 3 ]] && { echo "Container app create failed three times. Run ./deploy.sh again in a few minutes."; exit 1; }
+  echo "  Container app create failed (try $try of 3). Waiting 45 seconds, then trying again."
+  sleep 45
+done
 
 say "5. Change scaling: always 1 warm replica, up to 5, add a replica per 20 concurrent requests"
 az containerapp update --name ca-hello --resource-group "$RG" \
