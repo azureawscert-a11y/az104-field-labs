@@ -17,6 +17,7 @@ The full book has 264 pages: all five exam domains, 12 labs and a capstone, 156 
 - [Complete Bundle: book, labs and Practice Pack](https://jeysingh.gumroad.com/l/az104-complete-bundle)
 - [Field Guide and labs only](https://jeysingh.gumroad.com/l/az104-field-guide)
 - [Practice Pack only](https://jeysingh.gumroad.com/l/az104-practice-pack)
+- [Field Guide on Leanpub](https://leanpub.com/az104-field-guide)
 
 ## What you need
 
